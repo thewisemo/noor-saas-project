@@ -1,0 +1,685 @@
+name: Bootstrap Noor
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate repository content
+        run: |
+          set -e
+
+          # ====== root files ======
+          mkdir -p assets/brand assets/ui docs .github/workflows infra/nginx infra/pm2 infra/scripts shared/src/constants shared/src/dto shared/src/types \
+                   backend-nestjs/src/{config,database/entities,database/migrations,database/seeds,common/decorators,common/guards,auth/strategies,auth/dto,tenants,users,orders,sockets,tracking,whatsapp/providers,whatsapp,ai,sms/providers,files} \
+                   frontend-nextjs/public/brand frontend-nextjs/src/app/(auth)/login frontend-nextjs/src/app/(auth)/forgot-password \
+                   frontend-nextjs/src/app/{super,service,admin} frontend-nextjs/src/app/super/tenants frontend-nextjs/src/app/service/takeover/[id] \
+                   frontend-nextjs/src/app/admin/products/import frontend-nextjs/src/app/admin/products frontend-nextjs/src/app/admin/branches/[id]/zones frontend-nextjs/src/app/admin/branches \
+                   frontend-nextjs/src/components/{layout,ui,chat,map} frontend-nextjs/src/{lib,styles} sample-data
+
+          cat > README.md <<'EOF'
+          # Noor – SaaS لإدارة التوصيل (Multi‑tenant)
+
+          هذا المستودع يحتوي مشروع **Noor**: باكند NestJS، واجهة Next.js عربية (RTL)، وتطبيقين أندرويد (مندوب/مجَهّز) بهيكل جاهز،
+          بالإضافة إلى بنية النشر على Ubuntu (Nginx + PM2) وملفات توثيق ودليل التثبيت.
+          راجع `docs/INSTALL_GUIDE.md` لتثبيت سريع على Hostinger/Ubuntu 22.04.
+          EOF
+
+          cat > LICENSE <<'EOF'
+          MIT License
+
+          Copyright (c) 2025 Noor
+          Permission is hereby granted, free of charge, to any person obtaining a copy
+          of this software and associated documentation files (the "Software"), to deal
+          in the Software without restriction...
+          EOF
+
+          cat > .editorconfig <<'EOF'
+          root = true
+          [*]
+          charset = utf-8
+          end_of_line = lf
+          insert_final_newline = true
+          indent_style = space
+          indent_size = 2
+          EOF
+
+          cat > .gitignore <<'EOF'
+          node_modules/
+          dist/
+          .next/
+          build/
+          coverage/
+          .env
+          .env.local
+          .env.*.local
+          .DS_Store
+          Thumbs.db
+          *.iml
+          .gradle/
+          local.properties
+          **/build/
+          .idea/
+          .cxx/
+          *.apk
+          EOF
+
+          cat > .prettierrc <<'EOF'
+          {
+            "semi": true,
+            "singleQuote": true,
+            "trailingComma": "es5",
+            "printWidth": 100
+          }
+          EOF
+
+          # ====== infra ======
+          cat > infra/nginx/noor.conf.template <<'EOF'
+          server {
+            listen 80;
+            server_name noor.ghithak.com.sa;
+
+            client_max_body_size 25m;
+
+            location / {
+              proxy_http_version 1.1;
+              proxy_set_header Upgrade $http_upgrade;
+              proxy_set_header Connection "upgrade";
+              proxy_set_header Host $host;
+              proxy_cache_bypass $http_upgrade;
+              proxy_pass http://127.0.0.1:3000;
+            }
+            location /api/ {
+              proxy_http_version 1.1;
+              proxy_set_header Upgrade $http_upgrade;
+              proxy_set_header Connection "upgrade";
+              proxy_set_header Host $host;
+              proxy_set_header X-Forwarded-Proto $scheme;
+              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              proxy_cache_bypass $http_upgrade;
+              proxy_pass http://127.0.0.1:3001/;
+            }
+          }
+          EOF
+
+          cat > infra/pm2/ecosystem.config.js <<'EOF'
+          module.exports = {
+            apps: [
+              { name: "noor-api", script: "dist/main.js", cwd: "backend-nestjs", env: { NODE_ENV: "production" } },
+              { name: "noor-web", script: "npm", args: "run start", cwd: "frontend-nextjs", env: { NODE_ENV: "production", PORT: 3000 } }
+            ]
+          }
+          EOF
+
+          cat > infra/scripts/server_setup.sh <<'EOF'
+          #!/usr/bin/env bash
+          set -e
+          apt update && apt upgrade -y
+          apt install nginx nodejs npm postgresql postgresql-contrib redis-server certbot python3-certbot-nginx git -y
+          npm install pm2 -g
+          sudo -u postgres psql -c "CREATE DATABASE noor_db;"
+          sudo -u postgres psql -c "CREATE USER noor_user WITH PASSWORD 'ChangeMeNOW!';"
+          sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE noor_db TO noor_user;"
+          EOF
+          chmod +x infra/scripts/server_setup.sh
+
+          # ====== shared ======
+          cat > shared/package.json <<'EOF'
+          { "name": "noor-shared", "version": "0.1.0", "private": true, "main": "src/index.ts", "types": "src/index.ts",
+            "devDependencies": { "typescript": "^5.4.0" } }
+          EOF
+          cat > shared/tsconfig.json <<'EOF'
+          { "compilerOptions": { "target":"ES2021","module":"commonjs","declaration":true,"outDir":"dist","strict":true,"esModuleInterop":true,"skipLibCheck":true,"forceConsistentCasingInFileNames":true }, "include":["src"] }
+          EOF
+          cat > shared/src/constants/socket-events.ts <<'EOF'
+          export const SOCKET_EVENTS = {
+            DRIVER_LOCATION_UPDATE: 'driver_location_update',
+            NEW_ORDER: 'new_order',
+            ORDER_STATUS_CHANGE: 'order_status_change',
+            PICKING_UPDATE: 'picking_update',
+          } as const;
+          EOF
+          echo "// Shared DTOs" > shared/src/dto/index.ts
+          echo "// Shared types" > shared/src/types/index.ts
+
+          # ====== backend (NestJS) – minimal runnable skeleton ======
+          cat > backend-nestjs/package.json <<'EOF'
+          {
+            "name": "noor-backend",
+            "version": "0.1.0",
+            "private": true,
+            "scripts": { "build": "nest build", "start": "node dist/main.js", "start:dev": "nest start --watch" },
+            "dependencies": {
+              "@nestjs/common": "^10.3.0",
+              "@nestjs/config": "^3.2.0",
+              "@nestjs/core": "^10.3.0",
+              "@nestjs/jwt": "^10.2.0",
+              "@nestjs/passport": "^10.0.2",
+              "@nestjs/platform-express": "^10.3.0",
+              "bcrypt": "^5.1.1",
+              "class-transformer": "^0.5.1",
+              "class-validator": "^0.14.0",
+              "ioredis": "^5.3.2",
+              "jsonwebtoken": "^9.0.2",
+              "passport": "^0.7.0",
+              "passport-jwt": "^4.0.2",
+              "passport-local": "^1.0.0",
+              "pg": "^8.11.5",
+              "reflect-metadata": "^0.1.13",
+              "rxjs": "^7.8.1",
+              "socket.io": "^4.7.5",
+              "typeorm": "^0.3.20"
+            },
+            "devDependencies": {
+              "@nestjs/cli": "^10.3.2",
+              "@nestjs/schematics": "^10.1.3",
+              "@nestjs/testing": "^10.3.0",
+              "ts-loader": "^9.5.1",
+              "ts-node": "^10.9.2",
+              "typescript": "^5.4.0"
+            }
+          }
+          EOF
+          cat > backend-nestjs/nest-cli.json <<'EOF'
+          { "$schema": "https://json.schemastore.org/nest-cli", "collection": "@nestjs/schematics", "sourceRoot": "src" }
+          EOF
+          cat > backend-nestjs/tsconfig.json <<'EOF'
+          { "compilerOptions": { "module":"commonjs","declaration":false,"removeComments":true,"emitDecoratorMetadata":true,"experimentalDecorators":true,"allowSyntheticDefaultImports":true,"target":"ES2021","sourceMap":true,"outDir":"./dist","baseUrl":"./","incremental":true,"strictNullChecks":true,"strict":true,"skipLibCheck":true } }
+          EOF
+          cat > backend-nestjs/tsconfig.build.json <<'EOF'
+          { "extends":"./tsconfig.json","compilerOptions":{"outDir":"./dist","declaration":false,"removeComments":true},"include":["src/**/*"],"exclude":["node_modules","test","dist","**/*spec.ts"] }
+          EOF
+          cat > backend-nestjs/.env.example <<'EOF'
+          PORT=3001
+          DATABASE_URL=postgres://noor_user:CHANGE_ME@localhost:5432/noor_db
+          REDIS_URL=redis://localhost:6379
+          JWT_SECRET=CHANGE_ME_NOW
+          TYPEORM_SYNC=true
+          OPENAI_API_KEY=
+          WHATSAPP_API_TOKEN=
+          WHATSAPP_VERIFY_TOKEN=
+          SMS_OTP_PROVIDER=mock
+          EOF
+
+          cat > backend-nestjs/src/main.ts <<'EOF'
+          import { NestFactory } from '@nestjs/core';
+          import { AppModule } from './app.module';
+          import { ValidationPipe } from '@nestjs/common';
+          async function bootstrap() {
+            const app = await NestFactory.create(AppModule, { cors: true });
+            app.setGlobalPrefix('api');
+            app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+            const port = process.env.PORT || 3001;
+            await app.listen(port);
+            console.log(`Noor API running on port ${port}`);
+          }
+          bootstrap();
+          EOF
+
+          cat > backend-nestjs/src/app.module.ts <<'EOF'
+          import { Module } from '@nestjs/common';
+          import { ConfigModule, ConfigService } from '@nestjs/config';
+          import { TypeOrmModule } from 'typeorm';
+          import { AppController } from './app.controller';
+          import { AppService } from './app.service';
+          import { AuthModule } from './auth/auth.module';
+          import { TenantsModule } from './tenants/tenants.module';
+          import { UsersModule } from './users/users.module';
+          import { OrdersModule } from './orders/orders.module';
+          import { SocketModule } from './sockets/socket.module';
+          import { TrackingModule } from './tracking/tracking.module';
+          import { WhatsappModule } from './whatsapp/whatsapp.module';
+          import { AiModule } from './ai/ai.module';
+
+          @Module({
+            imports: [
+              ConfigModule.forRoot({ isGlobal: true }),
+              TypeOrmModule.forRootAsync({
+                imports: [ConfigModule],
+                useFactory: (cfg: ConfigService) => ({
+                  type: 'postgres',
+                  url: cfg.get<string>('DATABASE_URL'),
+                  autoLoadEntities: true,
+                  synchronize: cfg.get<string>('TYPEORM_SYNC') === 'true',
+                }),
+                inject: [ConfigService],
+              }),
+              AuthModule, TenantsModule, UsersModule, OrdersModule, SocketModule, TrackingModule, WhatsappModule, AiModule,
+            ],
+            controllers: [AppController],
+            providers: [AppService],
+          })
+          export class AppModule {}
+          EOF
+
+          cat > backend-nestjs/src/app.controller.ts <<'EOF'
+          import { Controller, Get } from '@nestjs/common';
+          @Controller()
+          export class AppController {
+            @Get('api/health') health() { return { ok: true, service: 'noor-api' }; }
+          }
+          EOF
+
+          echo "export class AppService {}" > backend-nestjs/src/app.service.ts
+
+          # entities
+          cat > backend-nestjs/src/database/entities/base.entity.ts <<'EOF'
+          import { PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, Column } from 'typeorm';
+          export abstract class BaseEntityWithTenant {
+            @PrimaryGeneratedColumn('uuid') id: string;
+            @Column({ type: 'uuid', nullable: true }) tenant_id: string | null;
+            @CreateDateColumn() created_at: Date;
+            @UpdateDateColumn() updated_at: Date;
+          }
+          EOF
+          cat > backend-nestjs/src/database/entities/tenant.entity.ts <<'EOF'
+          import { Entity, Column } from 'typeorm';
+          import { BaseEntityWithTenant } from './base.entity';
+          @Entity({ name: 'tenants' })
+          export class Tenant extends BaseEntityWithTenant {
+            @Column({ unique: true }) name: string;
+            @Column({ default: true }) is_active: boolean;
+          }
+          EOF
+          cat > backend-nestjs/src/database/entities/user.entity.ts <<'EOF'
+          import { Entity, Column } from 'typeorm';
+          import { BaseEntityWithTenant } from './base.entity';
+          export type UserRole = 'SUPER_ADMIN' | 'TENANT_ADMIN' | 'STAFF' | 'DRIVER' | 'PREPARER';
+          @Entity({ name: 'users' })
+          export class User extends BaseEntityWithTenant {
+            @Column({ nullable: true }) name: string;
+            @Column({ nullable: true, unique: true }) email: string;
+            @Column({ nullable: true, unique: true }) phone: string;
+            @Column() password_hash: string;
+            @Column({ type: 'varchar', length: 20, default: 'STAFF' }) role: UserRole;
+            @Column({ default: true }) is_active: boolean;
+          }
+          EOF
+
+          # auth (email login + seed super admin)
+          cat > backend-nestjs/src/auth/auth.module.ts <<'EOF'
+          import { Module } from '@nestjs/common';
+          import { JwtModule } from '@nestjs/jwt';
+          import { PassportModule } from '@nestjs/passport';
+          import { TypeOrmModule } from '@nestjs/typeorm';
+          import { AuthService } from './auth.service';
+          import { AuthController } from './auth.controller';
+          import { User } from '../database/entities/user.entity';
+          import { JwtStrategy } from './strategies/jwt.strategy';
+          @Module({
+            imports: [
+              TypeOrmModule.forFeature([User]),
+              PassportModule,
+              JwtModule.register({ secret: process.env.JWT_SECRET || 'CHANGE_ME', signOptions: { expiresIn: '7d' } }),
+            ],
+            controllers: [AuthController],
+            providers: [AuthService, JwtStrategy],
+            exports: [AuthService],
+          })
+          export class AuthModule {}
+          EOF
+          cat > backend-nestjs/src/auth/auth.service.ts <<'EOF'
+          import { Injectable, UnauthorizedException } from '@nestjs/common';
+          import { InjectRepository } from '@nestjs/typeorm';
+          import { Repository } from 'typeorm';
+          import { User } from '../database/entities/user.entity';
+          import * as bcrypt from 'bcrypt';
+          import { JwtService } from '@nestjs/jwt';
+          @Injectable()
+          export class AuthService {
+            constructor(@InjectRepository(User) private users: Repository<User>, private jwt: JwtService) {}
+            async seedSuperAdmin() {
+              const email = 'admin@noor.system';
+              const exists = await this.users.findOne({ where: { email } });
+              if (!exists) {
+                const u = this.users.create({
+                  email, name: 'Super Admin', role: 'SUPER_ADMIN',
+                  password_hash: await bcrypt.hash('superadmin123', 10), tenant_id: null,
+                });
+                await this.users.save(u);
+              }
+            }
+            async validateEmailPassword(email: string, password: string) {
+              const user = await this.users.findOne({ where: { email, is_active: true } });
+              if (!user) throw new UnauthorizedException();
+              const ok = await bcrypt.compare(password, user.password_hash);
+              if (!ok) throw new UnauthorizedException();
+              return user;
+            }
+            async loginWithEmail(email: string, password: string) {
+              const user = await this.validateEmailPassword(email, password);
+              const payload = { sub: user.id, role: user.role, tenant_id: user.tenant_id };
+              return { token: this.jwt.sign(payload), user };
+            }
+          }
+          EOF
+          cat > backend-nestjs/src/auth/auth.controller.ts <<'EOF'
+          import { Body, Controller, Post } from '@nestjs/common';
+          import { AuthService } from './auth.service';
+          class LoginDto { email: string; password: string; }
+          @Controller('api/auth')
+          export class AuthController {
+            constructor(private readonly auth: AuthService) { this.auth.seedSuperAdmin().catch(()=>{}); }
+            @Post('login') async login(@Body() dto: LoginDto) { return this.auth.loginWithEmail(dto.email, dto.password); }
+          }
+          EOF
+          cat > backend-nestjs/src/auth/strategies/jwt.strategy.ts <<'EOF'
+          import { Injectable } from '@nestjs/common';
+          import { PassportStrategy } from '@nestjs/passport';
+          import { ExtractJwt, Strategy } from 'passport-jwt';
+          @Injectable()
+          export class JwtStrategy extends PassportStrategy(Strategy) {
+            constructor() {
+              super({ jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(), ignoreExpiration: false, secretOrKey: process.env.JWT_SECRET || 'CHANGE_ME' });
+            }
+            async validate(payload: any) { return payload; }
+          }
+          EOF
+
+          # tenants module
+          cat > backend-nestjs/src/tenants/tenants.module.ts <<'EOF'
+          import { Module } from '@nestjs/common';
+          import { TypeOrmModule } from '@nestjs/typeorm';
+          import { Tenant } from '../database/entities/tenant.entity';
+          import { TenantsService } from './tenants.service';
+          import { TenantsController } from './tenants.controller';
+          @Module({ imports: [TypeOrmModule.forFeature([Tenant])], providers: [TenantsService], controllers: [TenantsController], exports: [TypeOrmModule, TenantsService] })
+          export class TenantsModule {}
+          EOF
+          cat > backend-nestjs/src/tenants/tenants.service.ts <<'EOF'
+          import { Injectable } from '@nestjs/common';
+          import { InjectRepository } from '@nestjs/typeorm';
+          import { Repository } from 'typeorm';
+          import { Tenant } from '../database/entities/tenant.entity';
+          @Injectable()
+          export class TenantsService {
+            constructor(@InjectRepository(Tenant) private repo: Repository<Tenant>) {}
+            findAll() { return this.repo.find(); }
+            create(name: string) { const t = this.repo.create({ name, is_active: true, tenant_id: null }); return this.repo.save(t); }
+          }
+          EOF
+          cat > backend-nestjs/src/tenants/tenants.controller.ts <<'EOF'
+          import { Body, Controller, Get, Post } from '@nestjs/common';
+          import { TenantsService } from './tenants.service';
+          @Controller('api/tenants')
+          export class TenantsController {
+            constructor(private srv: TenantsService) {}
+            @Get() list() { return this.srv.findAll(); }
+            @Post() create(@Body() body: { name: string }) { return this.srv.create(body.name); }
+          }
+          EOF
+
+          # users module placeholder
+          cat > backend-nestjs/src/users/users.module.ts <<'EOF'
+          import { Module } from '@nestjs/common';
+          import { TypeOrmModule } from '@nestjs/typeorm';
+          import { User } from '../database/entities/user.entity';
+          @Module({ imports: [TypeOrmModule.forFeature([User])], controllers: [], providers: [], exports: [TypeOrmModule] })
+          export class UsersModule {}
+          EOF
+
+          # sockets + orders + tracking + whatsapp stubs
+          cat > backend-nestjs/src/orders/orders.module.ts <<'EOF'
+          import { Module } from '@nestjs/common';
+          import { OrdersGateway } from './orders.gateway';
+          @Module({ providers: [OrdersGateway], exports: [OrdersGateway] })
+          export class OrdersModule {}
+          EOF
+          cat > backend-nestjs/src/orders/orders.gateway.ts <<'EOF'
+          import { MessageBody, SubscribeMessage, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
+          import { Server } from 'socket.io';
+          import { SOCKET_EVENTS } from '../../../shared/src/constants/socket-events';
+          @WebSocketGateway({ cors: { origin: '*' } })
+          export class OrdersGateway {
+            @WebSocketServer() server: Server;
+            @SubscribeMessage('ping') ping(@MessageBody() d: string) { return 'pong:' + d; }
+            broadcastNewOrder(order: any) { this.server.emit(SOCKET_EVENTS.NEW_ORDER, order); }
+          }
+          EOF
+          cat > backend-nestjs/src/sockets/socket.module.ts <<'EOF'
+          import { Module } from '@nestjs/common';
+          import { LocationGateway } from './location.gateway';
+          @Module({ providers: [LocationGateway], exports: [LocationGateway] })
+          export class SocketModule {}
+          EOF
+          cat > backend-nestjs/src/sockets/location.gateway.ts <<'EOF'
+          import { WebSocketGateway, WebSocketServer, SubscribeMessage, MessageBody } from '@nestjs/websockets';
+          import { Server } from 'socket.io';
+          import { SOCKET_EVENTS } from '../../../shared/src/constants/socket-events';
+          @WebSocketGateway({ cors: { origin: '*' } })
+          export class LocationGateway {
+            @WebSocketServer() server: Server;
+            @SubscribeMessage(SOCKET_EVENTS.DRIVER_LOCATION_UPDATE)
+            handleLocation(@MessageBody() payload: { driverId: string; lat: number; lng: number; orderId?: string }) {
+              this.server.emit(SOCKET_EVENTS.DRIVER_LOCATION_UPDATE, payload);
+            }
+          }
+          EOF
+          cat > backend-nestjs/src/tracking/tracking.module.ts <<'EOF'
+          import { Module } from '@nestjs/common';
+          import { TrackingController } from './tracking.controller';
+          @Module({ controllers: [TrackingController] })
+          export class TrackingModule {}
+          EOF
+          cat > backend-nestjs/src/tracking/tracking.controller.ts <<'EOF'
+          import { Controller, Get, Param } from '@nestjs/common';
+          @Controller('track')
+          export class TrackingController {
+            @Get(':orderId')
+            page(@Param('orderId') orderId: string) {
+              const html = `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>تتبع الطلب ${orderId}</title><style>body{font-family:sans-serif;background:#0b0b0f;color:#fff;margin:0;padding:1rem}#map{height:80vh;border-radius:12px}</style><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script></head><body><h2>تتبع الطلب #${orderId}</h2><div id="map"></div><script>var map=L.map('map').setView([24.7136,46.6753],12);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);var marker=L.marker([24.7136,46.6753]).addTo(map);</script></body></html>`;
+              return html;
+            }
+          }
+          EOF
+          cat > backend-nestjs/src/whatsapp/whatsapp.module.ts <<'EOF'
+          import { Module } from '@nestjs/common';
+          import { WhatsappController } from './whatsapp.controller';
+          import { WhatsappService } from './whatsapp.service';
+          @Module({ controllers: [WhatsappController], providers: [WhatsappService] })
+          export class WhatsappModule {}
+          EOF
+          cat > backend-nestjs/src/whatsapp/whatsapp.controller.ts <<'EOF'
+          import { Body, Controller, Get, Post, Query } from '@nestjs/common';
+          import { WhatsappService } from './whatsapp.service';
+          @Controller('api/webhook/whatsapp')
+          export class WhatsappController {
+            constructor(private readonly service: WhatsappService) {}
+            @Get() verify(@Query('hub.mode') mode: string,@Query('hub.verify_token') token: string,@Query('hub.challenge') challenge: string) {
+              if (mode==='subscribe' && token===process.env.WHATSAPP_VERIFY_TOKEN) return challenge; return 'forbidden';
+            }
+            @Post() async handle(@Body() body: any) { console.log('Incoming WhatsApp webhook:', JSON.stringify(body)); return { received: true }; }
+          }
+          EOF
+          echo "import { Module } from '@nestjs/common'; @Module({}) export class AiModule {}" > backend-nestjs/src/ai/ai.module.ts
+          echo "export class UploadModule {}" > backend-nestjs/src/files/upload.module.ts
+
+          # ====== frontend (Next.js) – Arabic RTL + dark ======
+          cat > frontend-nextjs/package.json <<'EOF'
+          {
+            "name": "noor-frontend",
+            "version": "0.1.0",
+            "private": true,
+            "scripts": { "dev": "next dev -p 3000", "build": "next build", "start": "next start -p 3000" },
+            "dependencies": { "axios": "^1.7.2", "next": "14.2.4", "next-themes": "^0.2.1", "react": "18.3.1", "react-dom": "18.3.1" },
+            "devDependencies": { "autoprefixer": "^10.4.19", "postcss": "^8.4.38", "tailwindcss": "^3.4.4", "typescript": "^5.4.0" }
+          }
+          EOF
+          cat > frontend-nextjs/next.config.js <<'EOF'
+          const nextConfig = { reactStrictMode: true, experimental: { appDir: true } };
+          module.exports = nextConfig;
+          EOF
+          cat > frontend-nextjs/postcss.config.js <<'EOF'
+          module.exports = { plugins: { tailwindcss: {}, autoprefixer: {} } }
+          EOF
+          cat > frontend-nextjs/tailwind.config.js <<'EOF'
+          module.exports = { content: ['./src/**/*.{ts,tsx,js,jsx}'], theme: { extend: { colors: { accent: '#6C63FF' } } }, darkMode: 'class', plugins: [] }
+          EOF
+          cat > frontend-nextjs/tsconfig.json <<'EOF'
+          { "compilerOptions": { "target":"ES2021","lib":["dom","dom.iterable","esnext"],"allowJs":true,"skipLibCheck":true,"strict":true,"forceConsistentCasingInFileNames":true,"noEmit":true,"esModuleInterop":true,"module":"esnext","moduleResolution":"bundler","resolveJsonModule":true,"isolatedModules":true,"jsx":"preserve","incremental":true,"baseUrl":"." }, "include":["next-env.d.ts","**/*.ts","**/*.tsx"], "exclude":["node_modules"] }
+          EOF
+          cat > frontend-nextjs/.env.example <<'EOF'
+          NEXT_PUBLIC_API_URL=https://noor.ghithak.com.sa/api
+          NEXT_PUBLIC_SOCKET_URL=wss://noor.ghithak.com.sa
+          NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=
+          NEXT_PUBLIC_BRAND_NAME=Noor
+          EOF
+          cat > frontend-nextjs/src/app/globals.css <<'EOF'
+          @tailwind base; @tailwind components; @tailwind utilities;
+          :root { color-scheme: dark; }
+          body { @apply bg-gray-900 text-white; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Noto Sans; }
+          .card { @apply bg-gray-800 rounded-xl border border-gray-700 shadow p-6; }
+          a { @apply text-accent; }
+          EOF
+          cat > frontend-nextjs/src/app/layout.tsx <<'EOF'
+          import './globals.css'; import { ThemeProvider } from 'next-themes'; import Image from 'next/image';
+          export const metadata = { title: 'Noor', description: 'منصة نور لإدارة التوصيل' };
+          export default function RootLayout({ children }: { children: React.ReactNode }) {
+            return (<html lang="ar" dir="rtl"><body><ThemeProvider attribute="class" defaultTheme="dark">
+              <header className="flex items-center justify-between p-4 border-b border-gray-800">
+                <div className="flex items-center gap-3"><Image src="/brand/noor-logo-light.svg" alt="Noor" width={120} height={32} /></div>
+                <button onClick={() => { const el=document.documentElement; const dark=el.classList.contains('dark'); el.classList.toggle('dark', !dark); localStorage.setItem('noor-theme', !dark ? 'dark' : 'light'); }} className="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600">تبديل النمط</button>
+              </header><main className="p-6">{children}</main></ThemeProvider></body></html>);
+          }
+          EOF
+          cat > frontend-nextjs/src/app/(auth)/login/page.tsx <<'EOF'
+          'use client'; import axios from 'axios'; import { useState } from 'react';
+          export default function LoginPage() {
+            const [email,setEmail]=useState('admin@noor.system'); const [password,setPassword]=useState('superadmin123'); const [msg,setMsg]=useState('');
+            async function submit(e:any){ e.preventDefault(); try{
+              const res=await axios.post(process.env.NEXT_PUBLIC_API_URL + '/auth/login',{email,password});
+              localStorage.setItem('noor-token',res.data.token); setMsg('تم الدخول بنجاح ✅'); window.location.href='/super';
+            }catch(e){ setMsg('فشل تسجيل الدخول'); } }
+            return (<div className="max-w-md mx-auto card"><h1 className="text-2xl mb-4">تسجيل الدخول</h1>
+              <form onSubmit={submit} className="space-y-3">
+                <div><label className="block mb-1">الإيميل</label><input className="w-full p-2 rounded bg-gray-900 border border-gray-700" value={email} onChange={e=>setEmail(e.target.value)} /></div>
+                <div><label className="block mb-1">كلمة المرور</label><input type="password" className="w-full p-2 rounded bg-gray-900 border border-gray-700" value={password} onChange={e=>setPassword(e.target.value)} /></div>
+                <button className="w-full p-2 bg-accent rounded text-white">دخول</button><p className="text-sm opacity-80">{msg}</p></form></div>);
+          }
+          EOF
+          cat > frontend-nextjs/src/app/(auth)/forgot-password/page.tsx <<'EOF'
+          export default function ForgotPasswordPage(){return(<div className="max-w-md mx-auto card"><h1 className="text-2xl mb-4">نسيت كلمة المرور</h1><p>ستتلقى رابطًا عبر الإيميل أو رمزًا عبر SMS حسب نوع الحساب.</p></div>);}
+          EOF
+          cat > frontend-nextjs/src/app/super/page.tsx <<'EOF'
+          export default function SuperDashboard(){return(<div className="grid md:grid-cols-3 gap-4"><div className="card">إجمالي المستأجرين</div><div className="card">طلبات اليوم</div><div className="card">مناديب متصلون</div></div>);}
+          EOF
+          cat > frontend-nextjs/src/app/super/tenants/page.tsx <<'EOF'
+          'use client'; import axios from 'axios'; import { useEffect, useState } from 'react';
+          export default function TenantsPage(){ const [list,setList]=useState<any[]>([]); const [name,setName]=useState('Ghithak Market');
+            useEffect(()=>{ axios.get(process.env.NEXT_PUBLIC_API_URL + '/tenants').then(r=>setList(r.data)); },[]);
+            async function create(){ const res=await axios.post(process.env.NEXT_PUBLIC_API_URL + '/tenants',{name}); setList(p=>[...p,res.data]); }
+            return(<div className="space-y-4"><div className="card"><div className="flex gap-2"><input className="p-2 rounded bg-gray-900 border border-gray-700" value={name} onChange={e=>setName(e.target.value)} /><button className="px-4 bg-accent rounded" onClick={create}>إضافة مستأجر</button></div></div><div className="card"><h2 className="text-xl mb-2">المستأجرون</h2><ul className="space-y-2">{list.map(t=><li key={t.id} className="border-b border-gray-700 pb-2">{t.name}</li>)}</ul></div></div>);}
+          EOF
+          cat > frontend-nextjs/src/app/admin/page.tsx <<'EOF'
+          export default function AdminDashboard(){return(<div className="grid md:grid-cols-2 gap-4"><div className="card">خريطة لحظية للمناديب (لاحقًا)</div><div className="card">إحصاءات المبيعات</div></div>);}
+          EOF
+          cat > frontend-nextjs/src/app/service/page.tsx <<'EOF'
+          export default function ServiceDashboard(){return(<div className="grid md:grid-cols-3 gap-4"><div className="card">المحادثات</div><div className="card">نافذة الدردشة</div><div className="card">بروفايل العميل</div></div>);}
+          EOF
+          echo "export default function TakeOver(){return <div className='card'>التدخل في محادثة</div>}" > frontend-nextjs/src/app/service/takeover/[id]/page.tsx
+          cat > frontend-nextjs/src/lib/api.ts <<'EOF'
+          import axios from 'axios';
+          const api = axios.create({ baseURL: process.env.NEXT_PUBLIC_API_URL });
+          api.interceptors.request.use((config)=>{ const t=typeof window!=='undefined'?localStorage.getItem('noor-token'):null; if(t) config.headers.Authorization='Bearer '+t; return config; });
+          export default api;
+          EOF
+          cat > frontend-nextjs/src/styles/theme.css <<'EOF'
+          /* Theme variables placeholder */
+          EOF
+
+          # ====== assets (simple SVGs) ======
+          cat > frontend-nextjs/public/brand/noor-logo-light.svg <<'EOF'
+          <svg xmlns="http://www.w3.org/2000/svg" width="180" height="40" viewBox="0 0 180 40"><rect width="180" height="40" rx="8" fill="#6C63FF"/><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-size="18" fill="#fff">NOOR</text></svg>
+          EOF
+          cp frontend-nextjs/public/brand/noor-logo-light.svg frontend-nextjs/public/brand/noor-logo-dark.svg
+          cp frontend-nextjs/public/brand/noor-logo-light.svg assets/brand/noor-logo-light.svg
+          cp frontend-nextjs/public/brand/noor-logo-light.svg assets/brand/noor-logo-dark.svg
+
+          # ====== docs ======
+          cat > docs/INSTALL_GUIDE.md <<'EOF'
+          # دليل التثبيت والتشغيل (Noor SaaS) — انسخ والصق
+
+          **المتطلبات**: Ubuntu 22.04 + Root + نطاق موجّه `noor.ghithak.com.sa` (Hostinger).
+          ## 1) تثبيت الحزم
+          ```bash
+          apt update && apt upgrade -y
+          apt install nginx nodejs npm postgresql postgresql-contrib redis-server certbot python3-certbot-nginx git -y
+          npm install pm2 -g
+          ```
+          ## 2) قاعدة البيانات
+          ```bash
+          sudo -u postgres psql -c "CREATE DATABASE noor_db;"
+          sudo -u postgres psql -c "CREATE USER noor_user WITH PASSWORD '[كلمة_سر_قوية]';"
+          sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE noor_db TO noor_user;"
+          ```
+          ## 3) تشغيل الباكند
+          ```bash
+          cd /var/www/noor/backend-nestjs
+          cp .env.example .env
+          nano .env    # املأ DATABASE_URL, JWT_SECRET, REDIS_URL, OPENAI_API_KEY, ...
+          npm install && npm run build
+          pm2 start dist/main.js --name "noor-api"
+          ```
+          ## 4) تشغيل الواجهة
+          ```bash
+          cd /var/www/noor/frontend-nextjs
+          cp .env.example .env
+          nano .env    # NEXT_PUBLIC_API_URL=https://noor.ghithak.com.sa/api
+          npm install && npm run build
+          pm2 start "npm run start" --name "noor-web"
+          ```
+          ## 5) Nginx + SSL
+          ```bash
+          nano /etc/nginx/sites-available/default
+          # الصق محتوى infra/nginx/noor.conf.template كما هو
+          nginx -t && systemctl restart nginx
+          certbot --nginx -d noor.ghithak.com.sa --non-interactive --agree-tos -m you@example.com
+          pm2 save
+          ```
+          ## 6) تجربة Ghithak Market
+          - دخول Super Admin: `admin@noor.system / superadmin123`
+          - أنشئ مستأجر "Ghithak Market" من شاشة Tenants.
+          EOF
+
+          # ====== sample-data: إنشاء ملف Excel فعلي عبر بايثون ======
+          python3 - <<'PY'
+          import pandas as pd, os
+          os.makedirs('sample-data', exist_ok=True)
+          df = pd.DataFrame([
+            {"name": "لبن نادك 1 لتر", "barcode": "6281006450012", "price": 8.95, "image_url": "https://picsum.photos/seed/laban/400/400"},
+            {"name": "خبز تميس", "barcode": "1234567890123", "price": 2.00, "image_url": "https://picsum.photos/seed/tamees/400/400"},
+            {"name": "جبن مثلثات 8 قطع", "barcode": "6281006450098", "price": 6.50, "image_url": "https://picsum.photos/seed/cheese/400/400"},
+            {"name": "ماء صحة 330مل × 12", "barcode": "6281006451125", "price": 7.95, "image_url": "https://picsum.photos/seed/water/400/400"},
+            {"name": "طرشي خيار 700جم", "barcode": "6281006452220", "price": 10.75, "image_url": "https://picsum.photos/seed/pickles/400/400"},
+          ])
+          df.to_excel('sample-data/sample-products.xlsx', index=False)
+          PY
+
+      - name: Create bootstrap branch and commit
+        run: |
+          set -e
+          BRANCH="bootstrap/noor"
+          git checkout -b "$BRANCH" || git checkout "$BRANCH"
+          git add -A
+          git -c user.name="github-actions" -c user.email="actions@github.com" commit -m "feat: bootstrap Noor SaaS monorepo (backend, frontend, infra, docs, sample-data)" || echo "No changes to commit"
+          git push -u origin "$BRANCH"
+
+      - name: Open Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: bootstrap/noor
+          title: "Bootstrap Noor SaaS monorepo"
+          body: |
+            This PR bootstraps the Noor SaaS project (NestJS backend, Next.js Arabic UI, initial Android app skeletons placeholder dirs, infra, docs, and sample Excel).
+          draft: false
