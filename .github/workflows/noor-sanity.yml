@@ -1,0 +1,21 @@
+name: Noor Sanity Write Test
+on: { workflow_dispatch: {} }
+permissions: { contents: write, pull-requests: write }
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Make a tiny change
+        run: |
+          echo "ok: $(date -u +%FT%TZ)" > NOOR_OK.txt
+      - name: Create PR
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.NOOR_WRITER_TOKEN }}
+          branch: chore/noor-sanity
+          base: main
+          commit-message: "chore: sanity write test"
+          title: "chore: sanity write test"
+          body: "Auto-created by action to verify write access."
