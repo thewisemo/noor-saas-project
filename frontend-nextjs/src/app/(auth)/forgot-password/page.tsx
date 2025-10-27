@@ -1,0 +1,8 @@
+export default function ForgotPasswordPage() {
+  return (
+    <div className="max-w-md mx-auto card">
+      <h1 className="text-2xl mb-4">نسيت كلمة المرور</h1>
+      <p>الوظيفة قيد الإعداد – ستتلقى رابطًا عبر الإيميل أو رمزًا عبر SMS حسب نوع الحساب.</p>
+    </div>
+  );
+}

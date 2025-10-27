@@ -1,0 +1,9 @@
+export default function SuperDashboard() {
+  return (
+    <div className="grid md:grid-cols-3 gap-4">
+      <div className="card">إجمالي المستأجرين</div>
+      <div className="card">طلبات اليوم</div>
+      <div className="card">مناديب متصلون</div>
+    </div>
+  );
+}
