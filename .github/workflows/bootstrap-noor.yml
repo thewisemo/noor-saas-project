@@ -15,11 +15,21 @@ jobs:
         with:
           fetch-depth: 0
 
+      # ✅ جهّز بايثون واعمل تثبيت لحزم إكسل المطلوبة
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install Excel dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas openpyxl
+
       - name: Generate repository content
+        shell: bash
         run: |
           set -e
-
-          # ====== root files ======
           mkdir -p assets/brand assets/ui docs .github/workflows infra/nginx infra/pm2 infra/scripts shared/src/constants shared/src/dto shared/src/types \
                    backend-nestjs/src/{config,database/entities,database/migrations,database/seeds,common/decorators,common/guards,auth/strategies,auth/dto,tenants,users,orders,sockets,tracking,whatsapp/providers,whatsapp,ai,sms/providers,files} \
                    frontend-nextjs/public/brand frontend-nextjs/src/app/(auth)/login frontend-nextjs/src/app/(auth)/forgot-password \
@@ -29,19 +39,8 @@ jobs:
 
           cat > README.md <<'EOF'
           # Noor – SaaS لإدارة التوصيل (Multi‑tenant)
-
-          هذا المستودع يحتوي مشروع **Noor**: باكند NestJS، واجهة Next.js عربية (RTL)، وتطبيقين أندرويد (مندوب/مجَهّز) بهيكل جاهز،
-          بالإضافة إلى بنية النشر على Ubuntu (Nginx + PM2) وملفات توثيق ودليل التثبيت.
-          راجع `docs/INSTALL_GUIDE.md` لتثبيت سريع على Hostinger/Ubuntu 22.04.
-          EOF
-
-          cat > LICENSE <<'EOF'
-          MIT License
-
-          Copyright (c) 2025 Noor
-          Permission is hereby granted, free of charge, to any person obtaining a copy
-          of this software and associated documentation files (the "Software"), to deal
-          in the Software without restriction...
+          هذا المستودع يحتوي مشروع Noor: NestJS + Next.js (عربي RTL) + Android skeletons + infra + docs.
+          راجع docs/INSTALL_GUIDE.md للتثبيت السريع على Hostinger/Ubuntu 22.04.
           EOF
 
           cat > .editorconfig <<'EOF'
@@ -74,16 +73,7 @@ jobs:
           *.apk
           EOF
 
-          cat > .prettierrc <<'EOF'
-          {
-            "semi": true,
-            "singleQuote": true,
-            "trailingComma": "es5",
-            "printWidth": 100
-          }
-          EOF
-
-          # ====== infra ======
+          # ==== infra (nginx + pm2) ====
           cat > infra/nginx/noor.conf.template <<'EOF'
           server {
             listen 80;
@@ -133,7 +123,7 @@ jobs:
           EOF
           chmod +x infra/scripts/server_setup.sh
 
-          # ====== shared ======
+          # ==== shared ====
           cat > shared/package.json <<'EOF'
           { "name": "noor-shared", "version": "0.1.0", "private": true, "main": "src/index.ts", "types": "src/index.ts",
             "devDependencies": { "typescript": "^5.4.0" } }
@@ -152,42 +142,17 @@ jobs:
           echo "// Shared DTOs" > shared/src/dto/index.ts
           echo "// Shared types" > shared/src/types/index.ts
 
-          # ====== backend (NestJS) – minimal runnable skeleton ======
+          # ==== backend-nestjs (قابل للتشغيل) ====
           cat > backend-nestjs/package.json <<'EOF'
           {
-            "name": "noor-backend",
-            "version": "0.1.0",
-            "private": true,
+            "name": "noor-backend", "version": "0.1.0", "private": true,
             "scripts": { "build": "nest build", "start": "node dist/main.js", "start:dev": "nest start --watch" },
             "dependencies": {
-              "@nestjs/common": "^10.3.0",
-              "@nestjs/config": "^3.2.0",
-              "@nestjs/core": "^10.3.0",
-              "@nestjs/jwt": "^10.2.0",
-              "@nestjs/passport": "^10.0.2",
-              "@nestjs/platform-express": "^10.3.0",
-              "bcrypt": "^5.1.1",
-              "class-transformer": "^0.5.1",
-              "class-validator": "^0.14.0",
-              "ioredis": "^5.3.2",
-              "jsonwebtoken": "^9.0.2",
-              "passport": "^0.7.0",
-              "passport-jwt": "^4.0.2",
-              "passport-local": "^1.0.0",
-              "pg": "^8.11.5",
-              "reflect-metadata": "^0.1.13",
-              "rxjs": "^7.8.1",
-              "socket.io": "^4.7.5",
-              "typeorm": "^0.3.20"
+              "@nestjs/common": "^10.3.0","@nestjs/config": "^3.2.0","@nestjs/core": "^10.3.0","@nestjs/jwt": "^10.2.0","@nestjs/passport": "^10.0.2","@nestjs/platform-express": "^10.3.0",
+              "bcrypt": "^5.1.1","class-transformer": "^0.5.1","class-validator": "^0.14.0","ioredis": "^5.3.2","jsonwebtoken": "^9.0.2","passport": "^0.7.0","passport-jwt": "^4.0.2","passport-local": "^1.0.0",
+              "pg": "^8.11.5","reflect-metadata": "^0.1.13","rxjs": "^7.8.1","socket.io": "^4.7.5","typeorm": "^0.3.20"
             },
-            "devDependencies": {
-              "@nestjs/cli": "^10.3.2",
-              "@nestjs/schematics": "^10.1.3",
-              "@nestjs/testing": "^10.3.0",
-              "ts-loader": "^9.5.1",
-              "ts-node": "^10.9.2",
-              "typescript": "^5.4.0"
-            }
+            "devDependencies": { "@nestjs/cli": "^10.3.2","@nestjs/schematics": "^10.1.3","@nestjs/testing": "^10.3.0","ts-loader": "^9.5.1","ts-node": "^10.9.2","typescript": "^5.4.0" }
           }
           EOF
           cat > backend-nestjs/nest-cli.json <<'EOF'
@@ -272,7 +237,6 @@ jobs:
 
           echo "export class AppService {}" > backend-nestjs/src/app.service.ts
 
-          # entities
           cat > backend-nestjs/src/database/entities/base.entity.ts <<'EOF'
           import { PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, Column } from 'typeorm';
           export abstract class BaseEntityWithTenant {
@@ -306,7 +270,6 @@ jobs:
           }
           EOF
 
-          # auth (email login + seed super admin)
           cat > backend-nestjs/src/auth/auth.module.ts <<'EOF'
           import { Module } from '@nestjs/common';
           import { JwtModule } from '@nestjs/jwt';
@@ -342,10 +305,7 @@ jobs:
               const email = 'admin@noor.system';
               const exists = await this.users.findOne({ where: { email } });
               if (!exists) {
-                const u = this.users.create({
-                  email, name: 'Super Admin', role: 'SUPER_ADMIN',
-                  password_hash: await bcrypt.hash('superadmin123', 10), tenant_id: null,
-                });
+                const u = this.users.create({ email, name: 'Super Admin', role: 'SUPER_ADMIN', password_hash: await bcrypt.hash('superadmin123', 10), tenant_id: null });
                 await this.users.save(u);
               }
             }
@@ -379,56 +339,11 @@ jobs:
           import { ExtractJwt, Strategy } from 'passport-jwt';
           @Injectable()
           export class JwtStrategy extends PassportStrategy(Strategy) {
-            constructor() {
-              super({ jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(), ignoreExpiration: false, secretOrKey: process.env.JWT_SECRET || 'CHANGE_ME' });
-            }
+            constructor() { super({ jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(), ignoreExpiration: false, secretOrKey: process.env.JWT_SECRET || 'CHANGE_ME' }); }
             async validate(payload: any) { return payload; }
           }
           EOF
 
-          # tenants module
-          cat > backend-nestjs/src/tenants/tenants.module.ts <<'EOF'
-          import { Module } from '@nestjs/common';
-          import { TypeOrmModule } from '@nestjs/typeorm';
-          import { Tenant } from '../database/entities/tenant.entity';
-          import { TenantsService } from './tenants.service';
-          import { TenantsController } from './tenants.controller';
-          @Module({ imports: [TypeOrmModule.forFeature([Tenant])], providers: [TenantsService], controllers: [TenantsController], exports: [TypeOrmModule, TenantsService] })
-          export class TenantsModule {}
-          EOF
-          cat > backend-nestjs/src/tenants/tenants.service.ts <<'EOF'
-          import { Injectable } from '@nestjs/common';
-          import { InjectRepository } from '@nestjs/typeorm';
-          import { Repository } from 'typeorm';
-          import { Tenant } from '../database/entities/tenant.entity';
-          @Injectable()
-          export class TenantsService {
-            constructor(@InjectRepository(Tenant) private repo: Repository<Tenant>) {}
-            findAll() { return this.repo.find(); }
-            create(name: string) { const t = this.repo.create({ name, is_active: true, tenant_id: null }); return this.repo.save(t); }
-          }
-          EOF
-          cat > backend-nestjs/src/tenants/tenants.controller.ts <<'EOF'
-          import { Body, Controller, Get, Post } from '@nestjs/common';
-          import { TenantsService } from './tenants.service';
-          @Controller('api/tenants')
-          export class TenantsController {
-            constructor(private srv: TenantsService) {}
-            @Get() list() { return this.srv.findAll(); }
-            @Post() create(@Body() body: { name: string }) { return this.srv.create(body.name); }
-          }
-          EOF
-
-          # users module placeholder
-          cat > backend-nestjs/src/users/users.module.ts <<'EOF'
-          import { Module } from '@nestjs/common';
-          import { TypeOrmModule } from '@nestjs/typeorm';
-          import { User } from '../database/entities/user.entity';
-          @Module({ imports: [TypeOrmModule.forFeature([User])], controllers: [], providers: [], exports: [TypeOrmModule] })
-          export class UsersModule {}
-          EOF
-
-          # sockets + orders + tracking + whatsapp stubs
           cat > backend-nestjs/src/orders/orders.module.ts <<'EOF'
           import { Module } from '@nestjs/common';
           import { OrdersGateway } from './orders.gateway';
@@ -446,6 +361,7 @@ jobs:
             broadcastNewOrder(order: any) { this.server.emit(SOCKET_EVENTS.NEW_ORDER, order); }
           }
           EOF
+
           cat > backend-nestjs/src/sockets/socket.module.ts <<'EOF'
           import { Module } from '@nestjs/common';
           import { LocationGateway } from './location.gateway';
@@ -465,6 +381,7 @@ jobs:
             }
           }
           EOF
+
           cat > backend-nestjs/src/tracking/tracking.module.ts <<'EOF'
           import { Module } from '@nestjs/common';
           import { TrackingController } from './tracking.controller';
@@ -482,6 +399,7 @@ jobs:
             }
           }
           EOF
+
           cat > backend-nestjs/src/whatsapp/whatsapp.module.ts <<'EOF'
           import { Module } from '@nestjs/common';
           import { WhatsappController } from './whatsapp.controller';
@@ -504,20 +422,15 @@ jobs:
           echo "import { Module } from '@nestjs/common'; @Module({}) export class AiModule {}" > backend-nestjs/src/ai/ai.module.ts
           echo "export class UploadModule {}" > backend-nestjs/src/files/upload.module.ts
 
-          # ====== frontend (Next.js) – Arabic RTL + dark ======
+          # ==== frontend-nextjs ====
           cat > frontend-nextjs/package.json <<'EOF'
-          {
-            "name": "noor-frontend",
-            "version": "0.1.0",
-            "private": true,
+          { "name": "noor-frontend","version": "0.1.0","private": true,
             "scripts": { "dev": "next dev -p 3000", "build": "next build", "start": "next start -p 3000" },
             "dependencies": { "axios": "^1.7.2", "next": "14.2.4", "next-themes": "^0.2.1", "react": "18.3.1", "react-dom": "18.3.1" },
-            "devDependencies": { "autoprefixer": "^10.4.19", "postcss": "^8.4.38", "tailwindcss": "^3.4.4", "typescript": "^5.4.0" }
-          }
+            "devDependencies": { "autoprefixer": "^10.4.19", "postcss": "^8.4.38", "tailwindcss": "^3.4.4", "typescript": "^5.4.0" } }
           EOF
           cat > frontend-nextjs/next.config.js <<'EOF'
-          const nextConfig = { reactStrictMode: true, experimental: { appDir: true } };
-          module.exports = nextConfig;
+          const nextConfig = { reactStrictMode: true, experimental: { appDir: true } }; module.exports = nextConfig;
           EOF
           cat > frontend-nextjs/postcss.config.js <<'EOF'
           module.exports = { plugins: { tailwindcss: {}, autoprefixer: {} } }
@@ -593,11 +506,11 @@ jobs:
           api.interceptors.request.use((config)=>{ const t=typeof window!=='undefined'?localStorage.getItem('noor-token'):null; if(t) config.headers.Authorization='Bearer '+t; return config; });
           export default api;
           EOF
-          cat > frontend-nextjs/src/styles/theme.css <<'EOF'
-          /* Theme variables placeholder */
+          cat > frontend-nextjs/src/app/globals.d.ts <<'EOF'
+          declare module "*.svg";
           EOF
 
-          # ====== assets (simple SVGs) ======
+          # شعارات بسيطة
           cat > frontend-nextjs/public/brand/noor-logo-light.svg <<'EOF'
           <svg xmlns="http://www.w3.org/2000/svg" width="180" height="40" viewBox="0 0 180 40"><rect width="180" height="40" rx="8" fill="#6C63FF"/><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-size="18" fill="#fff">NOOR</text></svg>
           EOF
@@ -605,53 +518,13 @@ jobs:
           cp frontend-nextjs/public/brand/noor-logo-light.svg assets/brand/noor-logo-light.svg
           cp frontend-nextjs/public/brand/noor-logo-light.svg assets/brand/noor-logo-dark.svg
 
-          # ====== docs ======
+          # ==== docs ====
           cat > docs/INSTALL_GUIDE.md <<'EOF'
           # دليل التثبيت والتشغيل (Noor SaaS) — انسخ والصق
-
-          **المتطلبات**: Ubuntu 22.04 + Root + نطاق موجّه `noor.ghithak.com.sa` (Hostinger).
-          ## 1) تثبيت الحزم
-          ```bash
-          apt update && apt upgrade -y
-          apt install nginx nodejs npm postgresql postgresql-contrib redis-server certbot python3-certbot-nginx git -y
-          npm install pm2 -g
-          ```
-          ## 2) قاعدة البيانات
-          ```bash
-          sudo -u postgres psql -c "CREATE DATABASE noor_db;"
-          sudo -u postgres psql -c "CREATE USER noor_user WITH PASSWORD '[كلمة_سر_قوية]';"
-          sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE noor_db TO noor_user;"
-          ```
-          ## 3) تشغيل الباكند
-          ```bash
-          cd /var/www/noor/backend-nestjs
-          cp .env.example .env
-          nano .env    # املأ DATABASE_URL, JWT_SECRET, REDIS_URL, OPENAI_API_KEY, ...
-          npm install && npm run build
-          pm2 start dist/main.js --name "noor-api"
-          ```
-          ## 4) تشغيل الواجهة
-          ```bash
-          cd /var/www/noor/frontend-nextjs
-          cp .env.example .env
-          nano .env    # NEXT_PUBLIC_API_URL=https://noor.ghithak.com.sa/api
-          npm install && npm run build
-          pm2 start "npm run start" --name "noor-web"
-          ```
-          ## 5) Nginx + SSL
-          ```bash
-          nano /etc/nginx/sites-available/default
-          # الصق محتوى infra/nginx/noor.conf.template كما هو
-          nginx -t && systemctl restart nginx
-          certbot --nginx -d noor.ghithak.com.sa --non-interactive --agree-tos -m you@example.com
-          pm2 save
-          ```
-          ## 6) تجربة Ghithak Market
-          - دخول Super Admin: `admin@noor.system / superadmin123`
-          - أنشئ مستأجر "Ghithak Market" من شاشة Tenants.
+          (ملف مختصر – النسخة الكاملة سنكملها بعد الدمج. يتضمن أوامر Ubuntu/Nginx/PM2 وتهيئة قاعدة البيانات.)
           EOF
 
-          # ====== sample-data: إنشاء ملف Excel فعلي عبر بايثون ======
+          # ==== sample-data: إنشاء ملف Excel فعلي ====
           python3 - <<'PY'
           import pandas as pd, os
           os.makedirs('sample-data', exist_ok=True)
@@ -669,17 +542,19 @@ jobs:
         run: |
           set -e
           BRANCH="bootstrap/noor"
-          git checkout -b "$BRANCH" || git checkout "$BRANCH"
+          git checkout -B "$BRANCH"
           git add -A
           git -c user.name="github-actions" -c user.email="actions@github.com" commit -m "feat: bootstrap Noor SaaS monorepo (backend, frontend, infra, docs, sample-data)" || echo "No changes to commit"
-          git push -u origin "$BRANCH"
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git"
+          git push -f origin "$BRANCH"
 
-      - name: Open Pull Request
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          branch: bootstrap/noor
-          title: "Bootstrap Noor SaaS monorepo"
-          body: |
-            This PR bootstraps the Noor SaaS project (NestJS backend, Next.js Arabic UI, initial Android app skeletons placeholder dirs, infra, docs, and sample Excel).
-          draft: false
+      - name: Open Pull Request via API
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_DATA=$(jq -n --arg t "Bootstrap Noor SaaS monorepo" --arg h "bootstrap/noor" --arg b "main" '{title:$t, head:$h, base:$b}')
+          curl -s -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            -d "$PR_DATA" \
+            https://api.github.com/repos/${{ github.repository }}/pulls \
+            || true
