@@ -548,7 +548,7 @@ jobs:
           }
           EOF
 
-          cat > frontend-nextjs/src/app/(auth)/forgot-password/page.tsx <<'EOF'
+          cat > "frontend-nextjs/src/app/(auth)/forgot-password/page.tsx" <<'EOF'
           export default function ForgotPasswordPage(){return(<div className="max-w-md mx-auto card"><h1 className="text-2xl mb-4">نسيت كلمة المرور</h1><p>ستتلقى رابطًا عبر الإيميل أو رمزًا عبر SMS حسب نوع الحساب.</p></div>);}
           EOF
 
@@ -572,7 +572,7 @@ jobs:
           export default function ServiceDashboard(){return(<div className="grid md:grid-cols-3 gap-4"><div className="card">المحادثات</div><div className="card">نافذة الدردشة</div><div className="card">بروفايل العميل</div></div>);}
           EOF
 
-          echo "export default function TakeOver(){return <div className='card'>التدخل في محادثة</div>}" > frontend-nextjs/src/app/service/takeover/[id]/page.tsx
+          echo "export default function TakeOver(){return <div className='card'>التدخل في محادثة</div>}" > "frontend-nextjs/src/app/service/takeover/[id]/page.tsx"
 
           cat > frontend-nextjs/src/lib/api.ts <<'EOF'
           import axios from 'axios';
