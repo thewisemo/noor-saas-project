@@ -532,7 +532,7 @@ jobs:
           }
           EOF
 
-          cat > frontend-nextjs/src/app/(auth)/login/page.tsx <<'EOF'
+          cat > "frontend-nextjs/src/app/(auth)/login/page.tsx" <<'EOF'
           'use client'; import axios from 'axios'; import { useState } from 'react';
           export default function LoginPage() {
             const [email,setEmail]=useState('admin@noor.system'); const [password,setPassword]=useState('superadmin123'); const [msg,setMsg]=useState('');
