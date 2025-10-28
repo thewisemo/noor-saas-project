@@ -22,14 +22,34 @@ jobs:
       - name: Generate Noor monorepo (backend + frontend + infra + docs + sample-data)
         shell: bash
         run: |
-          set -e
+          set -euo pipefail
 
-          # === Directories ===
-          mkdir -p assets/brand assets/ui docs .github/workflows infra/nginx infra/pm2 infra/scripts shared/src/{constants,dto,types} \
-                   backend-nestjs/src/{config,database/entities,database/migrations,database/seeds,common/decorators,common/guards,auth/strategies,auth/dto,tenants,users,orders,sockets,tracking,whatsapp/providers,whatsapp,ai,sms/providers,files} \
-                   frontend-nextjs/public/brand frontend-nextjs/src/app/(auth)/{login,forgot-password} \
-                   frontend-nextjs/src/app/{super,service,admin} frontend-nextjs/src/app/super/tenants frontend-nextjs/src/app/service/takeover/[id] \
-                   frontend-nextjs/src/components/{layout,ui,chat,map} frontend-nextjs/src/{lib,styles} sample-data
+          # === أنشئ المجلدات بدون أقواس غير مقتبسة ===
+          mkdir -p assets/brand assets/ui docs .github/workflows
+          mkdir -p infra/nginx infra/pm2 infra/scripts
+          mkdir -p shared/src/constants shared/src/dto shared/src/types
+
+          # backend
+          mkdir -p backend-nestjs/src/config
+          mkdir -p backend-nestjs/src/database/entities backend-nestjs/src/database/migrations backend-nestjs/src/database/seeds
+          mkdir -p backend-nestjs/src/common/decorators backend-nestjs/src/common/guards
+          mkdir -p backend-nestjs/src/auth/strategies backend-nestjs/src/auth/dto
+          mkdir -p backend-nestjs/src/tenants backend-nestjs/src/users backend-nestjs/src/orders
+          mkdir -p backend-nestjs/src/sockets backend-nestjs/src/tracking
+          mkdir -p backend-nestjs/src/whatsapp/providers backend-nestjs/src/whatsapp
+          mkdir -p backend-nestjs/src/ai backend-nestjs/src/sms/providers backend-nestjs/src/files
+
+          # frontend (اقتبس المسارات التي بها () و [])
+          mkdir -p frontend-nextjs/public/brand
+          mkdir -p "frontend-nextjs/src/app/(auth)/login"
+          mkdir -p "frontend-nextjs/src/app/(auth)/forgot-password"
+          mkdir -p frontend-nextjs/src/app/super frontend-nextjs/src/app/service frontend-nextjs/src/app/admin
+          mkdir -p frontend-nextjs/src/app/super/tenants
+          mkdir -p "frontend-nextjs/src/app/service/takeover/[id]"
+          mkdir -p frontend-nextjs/src/components/layout frontend-nextjs/src/components/ui frontend-nextjs/src/components/chat frontend-nextjs/src/components/map
+          mkdir -p frontend-nextjs/src/lib frontend-nextjs/src/styles
+
+          mkdir -p sample-data
 
           # === Root meta ===
           cat > README.md <<'EOF'
