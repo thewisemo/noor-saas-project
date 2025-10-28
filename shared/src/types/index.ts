@@ -1,1 +1,1 @@
-// Shared types go here
+// Shared types
