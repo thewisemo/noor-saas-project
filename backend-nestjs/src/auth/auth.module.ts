@@ -6,18 +6,12 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { User } from '../database/entities/user.entity';
 import { JwtStrategy } from './strategies/jwt.strategy';
-
 @Module({
   imports: [
     TypeOrmModule.forFeature([User]),
     PassportModule,
-    JwtModule.register({
-      secret: process.env.JWT_SECRET || 'CHANGE_ME',
-      signOptions: { expiresIn: '7d' },
-    }),
+    JwtModule.register({ secret: process.env.JWT_SECRET || 'CHANGE_ME', signOptions: { expiresIn: '7d' } }),
   ],
-  controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
-  exports: [AuthService],
+  controllers: [AuthController], providers: [AuthService, JwtStrategy], exports: [AuthService],
 })
 export class AuthModule {}

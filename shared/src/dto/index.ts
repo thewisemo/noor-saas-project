@@ -1,1 +1,1 @@
-// Placeholder for shared DTOs
+// Shared DTOs

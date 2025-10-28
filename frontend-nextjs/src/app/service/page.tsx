@@ -1,9 +1,1 @@
-export default function ServiceDashboard() {
-  return (
-    <div className="grid md:grid-cols-3 gap-4">
-      <div className="card">المحادثات</div>
-      <div className="card">نافذة الدردشة</div>
-      <div className="card">بروفايل العميل</div>
-    </div>
-  );
-}
+export default function ServiceDashboard(){return(<div className="grid md:grid-cols-3 gap-4"><div className="card">المحادثات</div><div className="card">نافذة الدردشة</div><div className="card">بروفايل العميل</div></div>);}

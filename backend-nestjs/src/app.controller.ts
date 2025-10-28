@@ -1,9 +1,3 @@
 import { Controller, Get } from '@nestjs/common';
-
 @Controller()
-export class AppController {
-  @Get('api/health')
-  health() {
-    return { ok: true, service: 'noor-api' };
-  }
-}
+export class AppController { @Get('api/health') health(){ return { ok:true, service:'noor-api' }; } }

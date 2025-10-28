@@ -2,11 +2,7 @@
   "name": "noor-backend",
   "version": "0.1.0",
   "private": true,
-  "scripts": {
-    "build": "nest build",
-    "start": "node dist/main.js",
-    "start:dev": "nest start --watch"
-  },
+  "scripts": { "build": "nest build", "start": "node dist/main.js", "start:dev": "nest start --watch" },
   "dependencies": {
     "@nestjs/common": "^10.3.0",
     "@nestjs/config": "^3.2.0",

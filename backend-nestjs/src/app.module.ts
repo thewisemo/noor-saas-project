@@ -17,26 +17,15 @@ import { AiModule } from './ai/ai.module';
     ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (cfg: ConfigService) => {
-        const url = cfg.get<string>('DATABASE_URL');
-        const sync = cfg.get<string>('TYPEORM_SYNC') === 'true';
-        return {
-          type: 'postgres',
-          url,
-          autoLoadEntities: true,
-          synchronize: sync,
-        };
-      },
+      useFactory: (cfg: ConfigService) => ({
+        type: 'postgres',
+        url: cfg.get<string>('DATABASE_URL'),
+        autoLoadEntities: true,
+        synchronize: cfg.get<string>('TYPEORM_SYNC') === 'true',
+      }),
       inject: [ConfigService],
     }),
-    AuthModule,
-    TenantsModule,
-    UsersModule,
-    OrdersModule,
-    SocketModule,
-    TrackingModule,
-    WhatsappModule,
-    AiModule,
+    AuthModule, TenantsModule, UsersModule, OrdersModule, SocketModule, TrackingModule, WhatsappModule, AiModule,
   ],
   controllers: [AppController],
   providers: [AppService],
