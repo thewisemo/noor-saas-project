@@ -1,30 +1,43 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User } from '../database/entities/user.entity';
-import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
+import * as bcrypt from 'bcrypt';
+import { User } from '../database/entities/user.entity';
+
 @Injectable()
 export class AuthService {
-  constructor(@InjectRepository(User) private users: Repository<User>, private jwt: JwtService) {}
-  async seedSuperAdmin() {
-    const email = 'admin@noor.system';
-    const exists = await this.users.findOne({ where: { email } });
-    if (!exists) {
-      const u = this.users.create({ email, name: 'Super Admin', role: 'SUPER_ADMIN', password_hash: await bcrypt.hash('superadmin123', 10), tenant_id: null });
-      await this.users.save(u);
-    }
-  }
-  async validateEmailPassword(email: string, password: string) {
-    const user = await this.users.findOne({ where: { email, is_active: true } });
-    if (!user) throw new UnauthorizedException();
-    const ok = await bcrypt.compare(password, user.password_hash);
-    if (!ok) throw new UnauthorizedException();
-    return user;
-  }
+  constructor(
+    @InjectRepository(User) private readonly usersRepo: Repository<User>,
+    private readonly jwt: JwtService,
+  ) {}
+
+  // تسجيل الدخول بالبريد وكلمة المرور
   async loginWithEmail(email: string, password: string) {
-    const user = await this.validateEmailPassword(email, password);
-    const payload = { sub: user.id, role: user.role, tenant_id: user.tenant_id };
-    return { token: this.jwt.sign(payload), user };
+    const user = await this.usersRepo.findOne({
+      where: { email },
+      select: ['id', 'email', 'password_hash', 'role', 'is_active', 'name'],
+    });
+
+    if (!user || !user.is_active) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const ok = await bcrypt.compare(password, user.password_hash);
+    if (!ok) throw new UnauthorizedException('Invalid credentials');
+
+    const payload = { sub: user.id, email: user.email, role: user.role };
+    const token = await this.jwt.signAsync(payload);
+
+    return {
+      ok: true,
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+      },
+    };
   }
 }
