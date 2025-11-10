@@ -1,8 +1,15 @@
 import { Body, Controller, Post } from '@nestjs/common';
 import { AuthService } from './auth.service';
-class LoginDto { email: string; password: string; }
-@Controller('api/auth')
+
+@Controller('auth')
 export class AuthController {
-  constructor(private readonly auth: AuthService) { this.auth.seedSuperAdmin().catch(()=>{}); }
-  @Post('login') async login(@Body() dto: LoginDto) { return this.auth.loginWithEmail(dto.email, dto.password); }
+  constructor(private readonly auth: AuthService) {}
+
+  @Post('login')
+  async login(
+    @Body('email') email: string,
+    @Body('password') password: string,
+  ) {
+    return this.auth.loginWithEmail(email, password);
+  }
 }

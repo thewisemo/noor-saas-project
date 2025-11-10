@@ -1,6 +1,7 @@
+import { HealthController } from './health.controller';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { TypeOrmModule } from 'typeorm';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
@@ -27,7 +28,7 @@ import { AiModule } from './ai/ai.module';
     }),
     AuthModule, TenantsModule, UsersModule, OrdersModule, SocketModule, TrackingModule, WhatsappModule, AiModule,
   ],
-  controllers: [AppController],
+  controllers: [HealthController, AppController],
   providers: [AppService],
 })
 export class AppModule {}

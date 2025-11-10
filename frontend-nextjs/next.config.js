@@ -1,1 +1,7 @@
-const nextConfig = { reactStrictMode: true, experimental: { appDir: true } }; module.exports = nextConfig;
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  reactStrictMode: false,
+  output: 'standalone',
+  images: { domains: ['picsum.photos'] },
+};
+module.exports = nextConfig;

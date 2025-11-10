@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { WhatsappService } from './whatsapp.service';
-@Controller('api/webhook/whatsapp')
+@Controller('webhook/whatsapp')
 export class WhatsappController {
   constructor(private readonly service: WhatsappService) {}
   @Get() verify(@Query('hub.mode') mode: string,@Query('hub.verify_token') token: string,@Query('hub.challenge') challenge: string) {

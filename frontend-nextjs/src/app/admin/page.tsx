@@ -1,1 +1,39 @@
-export default function AdminDashboard(){return(<div className="grid md:grid-cols-2 gap-4"><div className="card">خريطة لحظية للمناديب (لاحقًا)</div><div className="card">إحصاءات المبيعات</div></div>);}
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+
+export default function AdminHome() {
+  const router = useRouter();
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    try {
+      const token = localStorage.getItem('token') || '';
+      const role = localStorage.getItem('role') || '';
+      if (!token) {
+        router.replace('/login');
+        return;
+      }
+      if (role === 'SUPER_ADMIN') {
+        router.replace('/super/tenants');
+        return;
+      }
+      setReady(true);
+    } catch {
+      router.replace('/login');
+    }
+  }, [router]);
+
+  if (!ready) return null;
+
+  return (
+    <main style={{padding:24}}>
+      <h2>لوحة تحكم المستأجر</h2>
+      <ul style={{marginTop:12}}>
+        <li>إحصاءات المبيعات (لاحقًا)</li>
+        <li>خريطة تغطية للمناطق (لاحقًا)</li>
+      </ul>
+    </main>
+  );
+}

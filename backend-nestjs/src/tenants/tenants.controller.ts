@@ -1,17 +1,23 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 import { TenantsService } from './tenants.service';
 
-@Controller('api/tenants')
+@Controller('tenants')
 export class TenantsController {
-  constructor(private srv: TenantsService) {}
+  constructor(private readonly tenantsService: TenantsService) {}
 
-  @Get()
-  list() {
-    return this.srv.findAll();
-  }
+  @Get('check')
+  async checkSlug(@Query('slug') slug: string) {
+    const s = (slug || '').trim();
+    if (!s) return { available: false, reason: 'EMPTY_SLUG' };
 
-  @Post()
-  create(@Body() body: { name: string }) {
-    return this.srv.create(body.name);
+    try {
+      const list: any[] = await this.tenantsService.findAll?.();
+      const exists = Array.isArray(list)
+        ? list.some((t: any) => (t?.slug || '').toLowerCase() === s.toLowerCase())
+        : false;
+      return { available: !exists };
+    } catch (e) {
+      return { available: true, note: 'FALLBACK_NO_FINDALL' };
+    }
   }
 }
