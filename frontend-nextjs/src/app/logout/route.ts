@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 
 export async function GET(req: Request) {
-  const origin = new URL(req.url).origin;
-  const res = NextResponse.redirect(new URL("/login", origin));
+  const h = new Headers(req.headers);
+  const host  = h.get("x-forwarded-host") || h.get("host") || "";
+  const proto = h.get("x-forwarded-proto") || "https";
+  const url = new URL("/login", `${proto}://${host}`);
 
-  // امسح أي كوكيز محتملة تخص الجلسة
+  const res = NextResponse.redirect(url);
   for (const name of ["token","role","access_token","Authorization"]) {
     res.cookies.set(name, "", { path: "/", expires: new Date(0) });
   }
