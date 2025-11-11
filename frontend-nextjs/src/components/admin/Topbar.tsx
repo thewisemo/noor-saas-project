@@ -1,23 +1,25 @@
 "use client";
-import { useRouter } from "next/navigation";
+import ThemeToggle from "./ThemeToggle";
 
 export default function Topbar() {
-  const router = useRouter();
-  const logout = async () => {
+  const hardLogout = () => {
     try {
-      await fetch("/api/session", { method: "DELETE" });
+      // امسح أي local/session storage احتياطيًا
+      localStorage.removeItem("token");
+      localStorage.removeItem("role");
+      sessionStorage.clear();
     } catch {}
-    router.replace("/login");
+    // خليه خروج صريح عبر السيرفر
+    window.location.href = "/api/logout";
   };
+
   return (
-    <header className="h-14 border-b bg-white flex items-center justify-between px-4">
+    <header className="h-14 border-b bg-white dark:bg-neutral-900 flex items-center justify-between px-4">
       <div className="font-semibold">Noor • GHITHAK</div>
       <div className="flex items-center gap-2">
-        <span className="text-xs text-gray-500">status: online</span>
-        <button
-          onClick={logout}
-          className="rounded-lg border px-3 py-1.5 text-sm hover:bg-gray-50"
-        >
+        <ThemeToggle />
+        <span className="text-xs text-gray-500 dark:text-gray-400">status: online</span>
+        <button onClick={hardLogout} className="rounded-lg border px-3 py-1.5 text-sm hover:bg-gray-50 dark:hover:bg-neutral-800">
           Logout
         </button>
       </div>
