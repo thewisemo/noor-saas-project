@@ -1,28 +1,21 @@
-import type { NextRequest } from 'next/server';
-import { NextResponse } from 'next/server';
-
-const PROTECTED = ['/super', '/admin', '/service'];
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+  const needsAuth = pathname.startsWith("/admin") || pathname.startsWith("/super");
+  if (!needsAuth) return NextResponse.next();
 
-  if (pathname === '/') {
-    return NextResponse.redirect(new URL('/login', req.url));
+  const token = req.cookies.get("token")?.value || "";
+  if (!token) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/login";
+    url.searchParams.set("next", pathname);
+    return NextResponse.redirect(url);
   }
-
-  if (PROTECTED.some(p => pathname.startsWith(p))) {
-    const token = req.cookies.get('token')?.value;
-    if (!token) {
-      const url = req.nextUrl.clone();
-      url.pathname = '/login';
-      return NextResponse.redirect(url);
-    }
-  }
-
   return NextResponse.next();
 }
 
-
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|api).*)'],
+  matcher: ["/admin/:path*", "/super/:path*"],
 };

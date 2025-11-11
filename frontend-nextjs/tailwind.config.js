@@ -1,1 +1,7 @@
-module.exports = { content: ['./src/**/*.{ts,tsx,js,jsx}'], theme: { extend: { colors: { accent: '#6C63FF' } } }, darkMode: 'class', plugins: [] }
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  darkMode: "class",
+  content: ["./src/**/*.{js,ts,jsx,tsx}"],
+  theme: { extend: {} },
+  plugins: [],
+};
