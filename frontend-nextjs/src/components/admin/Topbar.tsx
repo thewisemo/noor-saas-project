@@ -4,13 +4,11 @@ import ThemeToggle from "./ThemeToggle";
 export default function Topbar() {
   const hardLogout = () => {
     try {
-      // امسح أي local/session storage احتياطيًا
       localStorage.removeItem("token");
       localStorage.removeItem("role");
       sessionStorage.clear();
     } catch {}
-    // خليه خروج صريح عبر السيرفر
-    window.location.href = "/api/logout";
+    window.location.href = "/logout";
   };
 
   return (
