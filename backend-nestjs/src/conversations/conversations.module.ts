@@ -1,0 +1,15 @@
+import { Module } from '@nestjs/common';
+import { ConversationsService } from './conversations.service';
+import { ConversationsController } from './conversations.controller';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { Conversation } from '../database/entities/conversation.entity';
+import { SocketModule } from '../sockets/socket.module';
+
+@Module({
+  imports: [TypeOrmModule.forFeature([Conversation]), SocketModule],
+  controllers: [ConversationsController],
+  providers: [ConversationsService],
+  exports: [ConversationsService],
+})
+export class ConversationsModule {}
+

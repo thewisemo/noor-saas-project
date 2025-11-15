@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 export default function AdminHome() {
   const router = useRouter();
@@ -31,8 +32,8 @@ export default function AdminHome() {
     <main style={{padding:24}}>
       <h2>لوحة تحكم المستأجر</h2>
       <ul style={{marginTop:12}}>
+        <li><Link href="/admin/zones" style={{color:'#6C63FF'}}>إدارة مناطق التغطية</Link></li>
         <li>إحصاءات المبيعات (لاحقًا)</li>
-        <li>خريطة تغطية للمناطق (لاحقًا)</li>
       </ul>
     </main>
   );

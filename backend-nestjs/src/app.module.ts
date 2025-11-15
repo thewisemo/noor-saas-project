@@ -12,10 +12,18 @@ import { SocketModule } from './sockets/socket.module';
 import { TrackingModule } from './tracking/tracking.module';
 import { WhatsappModule } from './whatsapp/whatsapp.module';
 import { AiModule } from './ai/ai.module';
+import { ZonesModule } from './zones/zones.module';
+import { ConversationsModule } from './conversations/conversations.module';
+import { ProductsModule } from './products/products.module';
+import { envValidationSchema } from './config/env.validation';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      validationSchema: envValidationSchema,
+      expandVariables: true,
+    }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (cfg: ConfigService) => ({
@@ -26,7 +34,17 @@ import { AiModule } from './ai/ai.module';
       }),
       inject: [ConfigService],
     }),
-    AuthModule, TenantsModule, UsersModule, OrdersModule, SocketModule, TrackingModule, WhatsappModule, AiModule,
+    AuthModule,
+    TenantsModule,
+    UsersModule,
+    OrdersModule,
+    SocketModule,
+    TrackingModule,
+    WhatsappModule,
+    AiModule,
+    ZonesModule,
+    ConversationsModule,
+    ProductsModule,
   ],
   controllers: [HealthController, AppController],
   providers: [AppService],

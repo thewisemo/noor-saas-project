@@ -3,4 +3,5 @@ export const SOCKET_EVENTS = {
   NEW_ORDER: 'new_order',
   ORDER_STATUS_CHANGE: 'order_status_change',
   PICKING_UPDATE: 'picking_update',
+  CONVERSATION_UPDATE: 'conversation_update',
 } as const;

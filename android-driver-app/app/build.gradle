@@ -10,6 +10,8 @@ android {
     targetSdkVersion 34
     versionCode 1
     versionName "0.1"
+    buildConfigField "String", "SOCKET_URL", "\"https://noor.ghithak.com.sa\""
+    buildConfigField "String", "API_URL", "\"https://noor.ghithak.com.sa/api\""
   }
   buildTypes {
     release { minifyEnabled false }
@@ -22,4 +24,8 @@ dependencies {
   implementation 'androidx.core:core-ktx:1.13.1'
   implementation 'androidx.appcompat:appcompat:1.7.0'
   implementation 'com.google.android.material:material:1.12.0'
+  implementation 'com.google.android.gms:play-services-location:21.2.0'
+  implementation ('io.socket:socket.io-client:2.1.0') {
+    exclude group: 'org.json', module: 'json'
+  }
 }

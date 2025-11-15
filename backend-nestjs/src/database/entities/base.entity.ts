@@ -1,7 +1,12 @@
-import { PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, Column } from 'typeorm';
-export abstract class BaseEntityWithTenant {
-  @PrimaryGeneratedColumn('uuid') id: string;
-  @Column({ type: 'uuid', nullable: true }) tenant_id: string | null;
-  @CreateDateColumn() created_at: Date;
-  @UpdateDateColumn() updated_at: Date;
+import { PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+
+export abstract class BaseEntity {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @CreateDateColumn({ name: 'created_at' })
+  created_at: Date;
+
+  @UpdateDateColumn({ name: 'updated_at' })
+  updated_at: Date;
 }

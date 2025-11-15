@@ -1,23 +1,23 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-  UpdateDateColumn,
-  Index,
-} from 'typeorm';
+import { Column, Entity, Index, ManyToOne } from 'typeorm';
+import { BaseEntity } from './base.entity';
+import { Tenant } from './tenant.entity';
 
 export enum UserRole {
   SUPER_ADMIN = 'SUPER_ADMIN',
+  TENANT_ADMIN = 'TENANT_ADMIN',
   STAFF = 'STAFF',
+  DRIVER = 'DRIVER',
+  PREPARER = 'PREPARER',
+  AGENT = 'AGENT',
 }
 
 @Entity({ name: 'users' })
-export class User {
-  @PrimaryGeneratedColumn('uuid')
-  id!: string;
+@Index('IDX_user_tenant', ['tenant_id'])
+export class User extends BaseEntity {
+  @ManyToOne(() => Tenant, { nullable: true })
+  tenant?: Tenant | null;
 
-  @Column('uuid', { nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   tenant_id!: string | null;
 
   @Column({ type: 'varchar', length: 150 })
@@ -39,9 +39,6 @@ export class User {
   @Column({ type: 'bool', default: true })
   is_active!: boolean;
 
-  @CreateDateColumn({ name: 'created_at' })
-  created_at!: Date;
-
-  @UpdateDateColumn({ name: 'updated_at' })
-  updated_at!: Date;
+  @Column({ type: 'timestamptz', nullable: true })
+  last_login_at?: Date | null;
 }
