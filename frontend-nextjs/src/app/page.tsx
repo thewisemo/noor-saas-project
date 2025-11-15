@@ -1,13 +1,11 @@
-'use client';
-
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
 export default function Home() {
-  const router = useRouter();
-  useEffect(() => {
-    const t = localStorage.getItem('token');
-    router.replace(t ? '/super/tenants' : '/login');
-  }, [router]);
-  return null;
+  const token = cookies().get("token")?.value;
+  const role  = cookies().get("role")?.value;
+
+  if (!token) redirect("/login");
+  if (role === "SUPER_ADMIN") redirect("/super/tenants");
+  redirect("/admin");
 }
