@@ -11,11 +11,11 @@ export class Tenant extends BaseEntity {
   slug: string;
 
   @Index('UQ_tenant_domain', { unique: true, where: '"domain" IS NOT NULL' })
-  @Column({ unique: true, nullable: true, length: 190 })
+  @Column({ type: 'varchar', unique: true, nullable: true, length: 190 })
   domain: string | null;
 
   @Index('UQ_tenant_whatsapp_phone', { unique: true, where: '"whatsapp_phone_number_id" IS NOT NULL' })
-  @Column({ name: 'whatsapp_phone_number_id', length: 64, nullable: true })
+  @Column({ type: 'varchar', name: 'whatsapp_phone_number_id', length: 64, nullable: true })
   whatsappPhoneNumberId: string | null;
 
   @Column({ type: 'jsonb', nullable: true })
