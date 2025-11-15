@@ -12,28 +12,28 @@ export class Product extends BaseEntity {
   @ManyToOne(() => Tenant, { nullable: false })
   tenant: Tenant;
 
-  @Column({ length: 150 })
+  @Column({ type: 'varchar', length: 150 })
   name: string;
 
-  @Column({ length: 80 })
+  @Column({ type: 'varchar', length: 80 })
   sku: string;
 
-  @Column({ length: 32, nullable: true })
+  @Column({ type: 'varchar', length: 32, nullable: true })
   barcode: string | null;
 
   @Column({ type: 'numeric', precision: 12, scale: 2 })
   price: string;
 
-  @Column({ length: 3, default: 'SAR' })
+  @Column({ type: 'varchar', length: 3, default: 'SAR' })
   currency: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   image_url?: string | null;
 
-  @Column({ default: true })
+  @Column({ type: 'boolean', default: true })
   is_active: boolean;
 
-  @Column({ default: true })
+  @Column({ type: 'boolean', default: true })
   is_available: boolean;
 
   @Column({ type: 'jsonb', nullable: true })

@@ -11,17 +11,17 @@ export class Customer extends BaseEntity {
   @ManyToOne(() => Tenant, { nullable: false })
   tenant: Tenant;
 
-  @Column({ length: 150 })
+  @Column({ type: 'varchar', length: 150 })
   name: string;
 
   @Index('UQ_customer_tenant_phone', ['tenant_id', 'phone'], { unique: true })
-  @Column({ length: 25 })
+  @Column({ type: 'varchar', length: 25 })
   phone: string;
 
-  @Column({ length: 25, nullable: true })
+  @Column({ type: 'varchar', length: 25, nullable: true })
   whatsapp_number: string | null;
 
-  @Column({ length: 190, nullable: true })
+  @Column({ type: 'varchar', length: 190, nullable: true })
   email: string | null;
 
   @Column({ type: 'jsonb', nullable: true })

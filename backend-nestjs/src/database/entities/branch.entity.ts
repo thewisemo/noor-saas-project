@@ -12,10 +12,10 @@ export class Branch extends BaseEntity {
   @ManyToOne(() => Tenant, { nullable: false })
   tenant: Tenant;
 
-  @Column({ length: 150 })
+  @Column({ type: 'varchar', length: 150 })
   name: string;
 
-  @Column({ length: 120 })
+  @Column({ type: 'varchar', length: 120 })
   slug: string;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
@@ -30,7 +30,7 @@ export class Branch extends BaseEntity {
   @Column({ type: 'jsonb', nullable: true })
   opening_hours: Record<string, any> | null;
 
-  @Column({ default: true })
+  @Column({ type: 'boolean', default: true })
   is_active: boolean;
 }
 

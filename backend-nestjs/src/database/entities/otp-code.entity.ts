@@ -11,7 +11,7 @@ export class OtpCode extends BaseEntity {
   @ManyToOne(() => Tenant, { nullable: true })
   tenant?: Tenant | null;
 
-  @Column({ length: 25 })
+  @Column({ type: 'varchar', length: 25 })
   phone: string;
 
   @Column({ type: 'varchar', length: 255 })
@@ -23,7 +23,7 @@ export class OtpCode extends BaseEntity {
   @Column({ type: 'int', default: 0 })
   attempts: number;
 
-  @Column({ default: false })
+  @Column({ type: 'boolean', default: false })
   is_verified: boolean;
 }
 

@@ -17,10 +17,10 @@ export class Promotion extends BaseEntity {
   @ManyToOne(() => Tenant, { nullable: false })
   tenant: Tenant;
 
-  @Column({ length: 50 })
+  @Column({ type: 'varchar', length: 50 })
   code: string;
 
-  @Column({ length: 150 })
+  @Column({ type: 'varchar', length: 150 })
   title: string;
 
   @Column({ type: 'text', nullable: true })
@@ -41,7 +41,7 @@ export class Promotion extends BaseEntity {
   @Column({ type: 'timestamptz', nullable: true })
   ends_at?: Date | null;
 
-  @Column({ default: true })
+  @Column({ type: 'boolean', default: true })
   is_active: boolean;
 
   @Column({ type: 'jsonb', nullable: true })

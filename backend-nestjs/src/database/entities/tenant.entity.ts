@@ -3,11 +3,11 @@ import { BaseEntity } from './base.entity';
 
 @Entity({ name: 'tenants' })
 export class Tenant extends BaseEntity {
-  @Column({ unique: true, length: 150 })
+  @Column({ type: 'varchar', length: 150, unique: true })
   name: string;
 
   @Index('UQ_tenant_slug', { unique: true })
-  @Column({ unique: true, length: 120 })
+  @Column({ type: 'varchar', unique: true, length: 120 })
   slug: string;
 
   @Index('UQ_tenant_domain', { unique: true, where: '"domain" IS NOT NULL' })
@@ -21,6 +21,6 @@ export class Tenant extends BaseEntity {
   @Column({ type: 'jsonb', nullable: true })
   settings: Record<string, any> | null;
 
-  @Column({ default: true })
+  @Column({ type: 'boolean', default: true })
   is_active: boolean;
 }

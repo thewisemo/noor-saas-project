@@ -31,7 +31,7 @@ export class Inventory extends BaseEntity {
   @Column({ type: 'int', default: 0 })
   reserved_quantity: number;
 
-  @Column({ default: true })
+  @Column({ type: 'boolean', default: true })
   is_tracking: boolean;
 }
 

@@ -32,7 +32,7 @@ export class Order extends BaseEntity {
   @ManyToOne(() => Tenant, { nullable: false })
   tenant: Tenant;
 
-  @Column({ length: 50 })
+  @Column({ type: 'varchar', length: 50 })
   order_number: string;
 
   @ManyToOne(() => Customer, { nullable: false })

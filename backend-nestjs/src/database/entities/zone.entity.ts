@@ -18,7 +18,7 @@ export class Zone extends BaseEntity {
   @Column({ type: 'uuid', nullable: true })
   branch_id: string | null;
 
-  @Column({ length: 150 })
+  @Column({ type: 'varchar', length: 150 })
   name: string;
 
   @Column({ type: 'jsonb' })
