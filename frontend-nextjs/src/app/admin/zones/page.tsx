@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { GoogleMap, Polygon, DrawingManager, useLoadScript } from '@react-google-maps/api';
+import DashboardHeader from '@/components/layout/DashboardHeader';
 
 type Zone = {
   id: string;
@@ -102,11 +103,19 @@ export default function ZonesPage() {
   }
 
   return (
-    <div className="space-y-6 p-6">
-      <h1 className="text-2xl font-semibold">مناطق التغطية</h1>
+    <div className="min-h-screen bg-[var(--bg)]">
+      <DashboardHeader title="مناطق التغطية" />
+      <main className="space-y-6 p-6">
+        <section className="glass-panel">
+          <div className="space-y-2">
+            <p className="text-xs uppercase tracking-[0.3em] text-gray-300">خرائط التوصيل</p>
+            <h1 className="text-2xl font-semibold">ارسم نطاقاتك وحدّث رسوم التوصيل في الزمن الحقيقي.</h1>
+            <p className="text-sm text-gray-200">استخدم أداة الرسم لتحديد الحدود الجغرافية ثم احفظها مباشرة في قاعدة البيانات.</p>
+          </div>
+        </section>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <div className="card md:col-span-2">
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="card md:col-span-2">
           <div style={{ height: '500px' }}>
             <GoogleMap
               center={DEFAULT_CENTER}
@@ -161,61 +170,65 @@ export default function ZonesPage() {
           </div>
         </div>
 
-        <div className="card space-y-4">
-          <h2 className="text-lg font-semibold">بيانات المنطقة</h2>
-          <div className="space-y-2">
-            <label className="block text-sm">الاسم</label>
-            <input
+          <div className="card space-y-4">
+            <h2 className="text-lg font-semibold">بيانات المنطقة</h2>
+            <div className="space-y-2">
+              <label className="block text-sm text-gray-400">الاسم</label>
+              <input
               value={form.name}
               onChange={e => setForm(prev => ({ ...prev, name: e.target.value }))}
-              className="w-full rounded bg-gray-900 p-2"
+                className="w-full rounded-xl border border-gray-800 bg-transparent p-2 focus:border-accent focus:outline-none"
               placeholder="مثال: حي العليا"
             />
-          </div>
-          <div className="space-y-2">
-            <label className="block text-sm">رسوم التوصيل (ر.س)</label>
-            <input
+            </div>
+            <div className="space-y-2">
+              <label className="block text-sm text-gray-400">رسوم التوصيل (ر.س)</label>
+              <input
               type="number"
               value={form.deliveryFee}
               onChange={e => setForm(prev => ({ ...prev, deliveryFee: e.target.value }))}
-              className="w-full rounded bg-gray-900 p-2"
+                className="w-full rounded-xl border border-gray-800 bg-transparent p-2 focus:border-accent focus:outline-none"
             />
-          </div>
-          <div className="space-y-2">
-            <label className="block text-sm">الحد الأدنى للطلب (ر.س)</label>
-            <input
+            </div>
+            <div className="space-y-2">
+              <label className="block text-sm text-gray-400">الحد الأدنى للطلب (ر.س)</label>
+              <input
               type="number"
               value={form.minimumOrderValue}
               onChange={e => setForm(prev => ({ ...prev, minimumOrderValue: e.target.value }))}
-              className="w-full rounded bg-gray-900 p-2"
+                className="w-full rounded-xl border border-gray-800 bg-transparent p-2 focus:border-accent focus:outline-none"
             />
-          </div>
-          <button
+            </div>
+            <button
             onClick={saveZone}
             disabled={loading}
-            className="w-full rounded bg-accent py-2 text-white disabled:opacity-60"
+              className="w-full rounded-2xl bg-accent py-2 text-white disabled:opacity-60"
           >
             {loading ? 'جارٍ الحفظ…' : 'حفظ المنطقة'}
           </button>
+          </div>
         </div>
-      </div>
 
-      <div className="card">
-        <h2 className="text-lg font-semibold mb-4">المناطق الحالية</h2>
-        <div className="space-y-3">
-          {zones.map(zone => (
-            <div key={zone.id} className="flex items-center justify-between border-b border-gray-700 pb-2">
-              <div>
-                <p className="font-medium">{zone.name}</p>
-                <p className="text-sm text-gray-400">
-                  رسوم التوصيل: {zone.delivery_fee} | الحد الأدنى: {zone.minimum_order_value}
-                </p>
+        <div className="card">
+          <h2 className="text-lg font-semibold mb-4">المناطق الحالية</h2>
+          <div className="space-y-3">
+            {zones.map(zone => (
+              <div key={zone.id} className="flex items-center justify-between border-b border-gray-800 pb-3">
+                <div>
+                  <p className="font-medium">{zone.name}</p>
+                  <p className="text-sm text-gray-400">
+                    رسوم التوصيل: {zone.delivery_fee} ر.س | الحد الأدنى: {zone.minimum_order_value} ر.س
+                  </p>
+                </div>
+                <span className="rounded-full border border-gray-800 px-3 py-1 text-xs text-gray-400">
+                  حد نقاط: {zone.polygon?.coordinates?.[0]?.length || 0}
+                </span>
               </div>
-            </div>
-          ))}
-          {!zones.length && <p className="text-sm text-gray-400">لا توجد مناطق بعد.</p>}
+            ))}
+            {!zones.length && <p className="text-sm text-gray-400">لا توجد مناطق بعد.</p>}
+          </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

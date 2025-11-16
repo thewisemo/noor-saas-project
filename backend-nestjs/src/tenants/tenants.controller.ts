@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { TenantsService } from './tenants.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -21,6 +21,23 @@ export class TenantsController {
   @Roles(UserRole.SUPER_ADMIN)
   create(@Body() body: { name: string; slug?: string; domain?: string | null; whatsappPhoneNumberId?: string | null }) {
     return this.tenantsService.create(body);
+  }
+
+  @Patch(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SUPER_ADMIN)
+  update(
+    @Param('id') id: string,
+    @Body() body: { name?: string; slug?: string; domain?: string | null; whatsappPhoneNumberId?: string | null },
+  ) {
+    return this.tenantsService.update(id, body);
+  }
+
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SUPER_ADMIN)
+  remove(@Param('id') id: string) {
+    return this.tenantsService.remove(id);
   }
 
   @Get('check')

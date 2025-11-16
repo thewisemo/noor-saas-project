@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
+import DashboardHeader from '@/components/layout/DashboardHeader';
 
 type ConversationMessage = {
   id: string;
@@ -119,8 +120,9 @@ export default function ServiceDashboard() {
   }, [conversations, filter]);
 
   return (
-    <div className="min-h-screen bg-[#111] text-white">
-      <div className="mx-auto flex h-screen max-w-7xl divide-x divide-gray-900 bg-[#0f0f0f]">
+    <div className="min-h-screen bg-[var(--bg)] text-white">
+      <DashboardHeader title="مركز خدمة العملاء" />
+      <div className="mx-auto flex h-[calc(100vh-96px)] max-w-7xl divide-x divide-gray-900 bg-[#0f0f0f]">
         <aside className="flex w-[26%] min-w-[260px] flex-col bg-[#181818]">
           <div className="flex items-center justify-between border-b border-gray-800 px-4 py-3">
             <h2 className="text-lg font-semibold">المحادثات ({conversations.length})</h2>
