@@ -8,7 +8,7 @@ import {
   ConnectedSocket,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { SOCKET_EVENTS } from '../../../shared/src/constants/socket-events';
+import { SOCKET_EVENTS } from '@shared/constants/socket-events';
 import { SocketAuthService } from './socket-auth.service';
 import { IsNumber, IsOptional, IsString } from 'class-validator';
 import { ValidationPipe } from '@nestjs/common';

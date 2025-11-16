@@ -8,7 +8,7 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { SOCKET_EVENTS } from '../../../shared/src/constants/socket-events';
+import { SOCKET_EVENTS } from '@shared/constants/socket-events';
 import { SocketAuthService } from './socket-auth.service';
 import { ValidationPipe } from '@nestjs/common';
 import { IsEnum, IsString } from 'class-validator';
