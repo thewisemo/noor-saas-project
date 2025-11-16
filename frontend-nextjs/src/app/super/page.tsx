@@ -5,6 +5,7 @@ import PageHeader from '@/components/ui/PageHeader';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { useRouter } from 'next/navigation';
+import { PRODUCT_NAME, productTagline } from '@/config/branding';
 
 const highlights = [
   { label: 'المستأجرون النشطون', value: '12', delta: '+3 هذا الشهر' },
@@ -17,18 +18,18 @@ export default function SuperDashboard() {
 
   return (
     <div className="min-h-screen bg-[var(--color-bg)]">
-      <DashboardHeader title="لوحة السوبر أدمن" accountName="Noor HQ" roleLabel="سوبر أدمن" />
+      <DashboardHeader title="لوحة السوبر أدمن" accountName={`${PRODUCT_NAME} HQ`} roleLabel="سوبر أدمن" />
 
       <main className="mx-auto max-w-6xl space-y-8 px-4 py-8 sm:px-6">
         <PageHeader
-          title="كل ما تحتاجه لمراقبة مستأجريك"
-          subtitle="تابع الأداء، اكتشف الأعطال، وادفع بالأتمتة إلى الأمام من خلال مركز نور التشغيلي."
+          title={`منصة ${PRODUCT_NAME} لإدارة المستأجرين`}
+          subtitle={productTagline}
           badge="محدث لحظيًا"
           actions={
             <div className="flex flex-wrap gap-3">
               <Button onClick={() => router.push('/super/tenants')}>إدارة المستأجرين</Button>
               <Button variant="secondary" className="text-sm">
-                مشاركة رابط مع فريق GHITHAK
+                مشاركة رابط دعوة
               </Button>
             </div>
           }

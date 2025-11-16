@@ -6,6 +6,8 @@ import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import Alert from '@/components/ui/Alert';
+import Image from 'next/image';
+import { PRODUCT_NAME, productTagline, logoLight } from '@/config/branding';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -71,17 +73,20 @@ export default function LoginPage() {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(90,70,255,0.4),_transparent_50%)]" />
       <div className="relative mx-auto flex max-w-6xl flex-col items-center gap-8">
         <div className="text-center space-y-3">
-          <p className="text-sm uppercase tracking-[0.4em] text-white/70">Noor • GHITHAK</p>
-          <h1 className="text-4xl font-bold">مرحبا بعودتك إلى منصة نور</h1>
-          <p className="text-sm text-white/70">إدارة المستأجرين، الطلبات، والمحادثات من لوحة تحكم واحدة مؤمنة بالكامل.</p>
+          <p className="text-sm uppercase tracking-[0.4em] text-white/70">{PRODUCT_NAME}</p>
+          <h1 className="text-4xl font-bold">مرحبًا بعودتك إلى {PRODUCT_NAME}</h1>
+          <p className="text-sm text-white/70">{productTagline}</p>
         </div>
 
         <Card className="w-full max-w-md bg-white/95 text-gray-900 shadow-2xl backdrop-blur">
           <form className="space-y-4" onSubmit={onSubmit}>
             <div className="text-center space-y-1">
-              <p className="text-sm font-medium text-indigo-600">تسجيل الدخول إلى الحساب</p>
-              <h2 className="text-2xl font-bold text-gray-900">Noor • GHITHAK</h2>
-              <p className="text-xs text-gray-500">أدخل بياناتك للمتابعة إلى لوحة التحكم.</p>
+              <div className="mx-auto flex h-16 w-32 items-center justify-center">
+                <Image src={logoLight} alt={PRODUCT_NAME} width={120} height={48} className="object-contain" priority />
+              </div>
+              <p className="text-sm font-medium text-indigo-600">تسجيل الدخول إلى حساب {PRODUCT_NAME}</p>
+              <h2 className="text-2xl font-bold text-gray-900">{PRODUCT_NAME}</h2>
+              <p className="text-xs text-gray-500">{productTagline}</p>
             </div>
 
             {error && <Alert variant="danger" message={error} />}

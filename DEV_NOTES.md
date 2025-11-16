@@ -19,6 +19,11 @@
   - `/location` namespace streams `SOCKET_EVENTS.DRIVER_LOCATION_UPDATE`.
 - Health check: `GET /api/health` → `{ ok: true, service: 'noor-api' }`.
 
+## Branding & Assets
+- Global product constants live in `frontend-nextjs/src/config/branding.ts` (`PRODUCT_NAME`, `productTagline`, and logo paths). Import these instead of hard-coding strings such as “Noor • GHITHAK”.
+- SVG logo placeholders are stored in `frontend-nextjs/public/brand/noor-logo-dark.svg` and `.../noor-logo-light.svg`. Replace those files with the final artwork when ready; components will pick them up automatically.
+- Shared layout components (`DashboardHeader`, `AdminShell`, login hero, etc.) consume the branding config so updating the logos or tagline happens in one place.
+
 ## Local Development
 ### Backend (`backend-nestjs`)
 ```bash
@@ -57,6 +62,16 @@ npm run build && npm start    # production preview
   - Use the UI to create/patch/delete tenants; payloads support `name`, `slug`, `domain`, `whatsappPhoneNumberId`, and `isActive`.
   - There is no pre-seeded “GHITHAK” tenant; create one manually through the super admin screen or via `POST /api/tenants`.
 - Tenant admins authenticate with the same `/api/auth/login` endpoint but receive JWTs scoped to their tenant. After login they can access `/admin` and `/service`.
+
+## Onboarding & User Management
+- Super admin flow:
+  - Create tenants from `/super/tenants`.
+  - From the same screen, open “حسابات الإدارة” for any tenant to view users and create the first `TENANT_ADMIN` via the slide-over form (calls `/front-api/super/tenants/[tenantId]/users` → `/api/tenants/:id/users`).
+  - Share the generated credentials with the tenant so they can log in.
+- Tenant admin flow:
+  - After login, the top navigation shows the Noor logo plus the tenant name to make it clear which account is active.
+  - Manage staff from `/admin/staff`: list current users, create new roles (Tenant Admin, Agent, Staff), and share initial passwords or invitations.
+  - Other tenant tools (zones, service dashboard, etc.) remain under `/admin/*` and respect the same theming/branding.
 
 ## Basic HTTP Reference
 - `GET /api/tenants` – list tenants (super admin only).

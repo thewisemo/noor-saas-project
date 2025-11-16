@@ -8,6 +8,7 @@ import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import Alert from '@/components/ui/Alert';
+import { PRODUCT_NAME } from '@/config/branding';
 
 type Tenant = {
   id: string;
@@ -15,6 +16,13 @@ type Tenant = {
   slug: string;
   domain?: string | null;
   whatsappPhoneNumberId?: string | null;
+};
+
+type TenantUser = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
 };
 
 const initialForm = { name: '', slug: '', domain: '', whatsappPhoneNumberId: '' };
@@ -27,6 +35,12 @@ export default function TenantsPage() {
   const [token, setToken] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [drawerTenant, setDrawerTenant] = useState<Tenant | null>(null);
+  const [tenantUsers, setTenantUsers] = useState<TenantUser[]>([]);
+  const [tenantUsersLoading, setTenantUsersLoading] = useState(false);
+  const [tenantUsersError, setTenantUsersError] = useState<string | null>(null);
+  const [userSuccess, setUserSuccess] = useState<string | null>(null);
+  const [userForm, setUserForm] = useState({ name: '', email: '', password: '' });
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -128,9 +142,71 @@ export default function TenantsPage() {
     [list],
   );
 
+  const openTenantUsers = (tenant: Tenant) => {
+    setDrawerTenant(tenant);
+    setUserForm({ name: '', email: '', password: '' });
+    setUserSuccess(null);
+    loadTenantUsers(tenant.id);
+  };
+
+  const loadTenantUsers = async (tenantId: string) => {
+    setTenantUsersLoading(true);
+    setTenantUsersError(null);
+    try {
+      const res = await fetch(`/front-api/super/tenants/${tenantId}/users`, {
+        headers: http().headers,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setTenantUsersError(data?.message || 'تعذر تحميل المستخدمين');
+        setTenantUsers([]);
+      } else {
+        setTenantUsers(data);
+      }
+    } catch (err) {
+      console.error(err);
+      setTenantUsersError('تعذر تحميل المستخدمين');
+    } finally {
+      setTenantUsersLoading(false);
+    }
+  };
+
+  const createTenantAdmin = async () => {
+    if (!drawerTenant) return;
+    if (!userForm.name.trim() || !userForm.email.trim() || !userForm.password.trim()) {
+      setTenantUsersError('أكمل جميع الحقول لإنشاء المستخدم.');
+      return;
+    }
+    setTenantUsersError(null);
+    setUserSuccess(null);
+    try {
+      const res = await fetch(`/front-api/super/tenants/${drawerTenant.id}/users`, {
+        method: 'POST',
+        headers: http().headers,
+        body: JSON.stringify({
+          name: userForm.name,
+          email: userForm.email,
+          password: userForm.password,
+          role: 'TENANT_ADMIN',
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setTenantUsersError(data?.message || 'تعذر إنشاء المستخدم');
+      } else {
+        setUserSuccess('تم إنشاء حساب مشرف للمستأجر. أرسل البيانات الجديدة للعميل.');
+        setUserForm({ name: '', email: '', password: '' });
+        loadTenantUsers(drawerTenant.id);
+      }
+    } catch (err) {
+      console.error(err);
+      setTenantUsersError('تعذر إنشاء المستخدم');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[var(--color-bg)]">
-      <DashboardHeader title="إدارة المستأجرين" accountName="Noor HQ" roleLabel="سوبر أدمن" />
+      <DashboardHeader title="منصة نور – إدارة المستأجرين" accountName={`${PRODUCT_NAME} HQ`} roleLabel="سوبر أدمن" />
       <main className="mx-auto max-w-6xl space-y-8 px-4 py-8 sm:px-6">
         <PageHeader
           title="سيطر على المستأجرين، النطاقات، والتراخيص"
@@ -181,6 +257,9 @@ export default function TenantsPage() {
                           </Button>
                           <Button variant="danger" className="px-3 py-1 text-xs" onClick={() => deleteTenant(tenant.id)}>
                             حذف
+                          </Button>
+                          <Button variant="ghost" className="px-3 py-1 text-xs" onClick={() => openTenantUsers(tenant)}>
+                            حسابات الإدارة
                           </Button>
                         </div>
                       </td>
@@ -246,6 +325,74 @@ export default function TenantsPage() {
           </Card>
         )}
       </main>
+
+      {drawerTenant && (
+        <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-sm">
+          <div className="h-full w-full max-w-lg overflow-y-auto bg-[var(--color-surface)] p-6 shadow-2xl">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <p className="text-sm text-[var(--color-muted)]">إدارة المستخدمين</p>
+                <h3 className="text-xl font-bold">{drawerTenant.name}</h3>
+              </div>
+              <button className="text-sm text-[var(--color-muted)] hover:text-[var(--color-text)]" onClick={() => setDrawerTenant(null)}>
+                إغلاق
+              </button>
+            </div>
+
+            {tenantUsersError && <Alert variant="danger" message={tenantUsersError} className="mb-4" />}
+            {userSuccess && <Alert variant="success" message={userSuccess} className="mb-4" />}
+
+            <Card
+              title="المستخدمون الحاليون"
+              description="يمكن لكل مستأجر أن يمتلك أكثر من مشرف واحد."
+              className="bg-[var(--color-card)]"
+            >
+              {tenantUsersLoading ? (
+                <p className="text-sm text-[var(--color-muted)]">جارٍ التحميل…</p>
+              ) : tenantUsers.length ? (
+                <ul className="space-y-2 text-sm">
+                  {tenantUsers.map(user => (
+                    <li key={user.id} className="rounded-2xl border border-[var(--color-border)] px-3 py-2">
+                      <p className="font-semibold">{user.name}</p>
+                      <p className="text-xs text-[var(--color-muted)]">{user.email}</p>
+                      <p className="text-xs text-[var(--color-muted)]">{user.role}</p>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-[var(--color-muted)]">لا يوجد مستخدمون بعد.</p>
+              )}
+            </Card>
+
+            <Card title="إضافة مشرف للمستأجر" description="أنشئ حساب Tenant Admin جديد." className="mt-4">
+              <div className="space-y-3">
+                <Input
+                  label="الاسم الكامل"
+                  value={userForm.name}
+                  onChange={e => setUserForm(prev => ({ ...prev, name: e.target.value }))}
+                />
+                <Input
+                  label="البريد الإلكتروني"
+                  type="email"
+                  value={userForm.email}
+                  onChange={e => setUserForm(prev => ({ ...prev, email: e.target.value }))}
+                />
+                <Input
+                  label="كلمة المرور المبدئية"
+                  type="text"
+                  value={userForm.password}
+                  onChange={e => setUserForm(prev => ({ ...prev, password: e.target.value }))}
+                  hint="أرسل هذه الكلمة للمستأجر وسيقوم بتغييرها بعد تسجيل الدخول الأول."
+                />
+                <div className="text-xs text-[var(--color-muted)]">الدور: Tenant Admin</div>
+              </div>
+              <Button className="mt-4 w-full" onClick={createTenantAdmin} disabled={tenantUsersLoading}>
+                حفظ الحساب
+              </Button>
+            </Card>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

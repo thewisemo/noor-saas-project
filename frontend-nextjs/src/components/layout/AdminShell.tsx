@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import DashboardHeader from './DashboardHeader';
 import { cn } from '@/lib/cn';
+import { PRODUCT_NAME } from '@/config/branding';
 
 type Props = {
   title: string;
@@ -14,6 +15,7 @@ type Props = {
 
 const navItems = [
   { label: 'الرئيسية', href: '/admin', icon: '🏠' },
+  { label: 'فريق العمل', href: '/admin/staff', icon: '👥' },
   { label: 'مناطق التغطية', href: '/admin/zones', icon: '🗺️' },
   { label: 'الطلبات', href: '/admin/orders', icon: '🧾', disabled: true },
   { label: 'المندوبون', href: '/admin/drivers', icon: '🚚', disabled: true },
@@ -41,8 +43,8 @@ export default function AdminShell({ title, subtitle, children }: Props) {
     <div className="min-h-screen bg-[var(--color-bg)]">
       <DashboardHeader
         title={title}
-        subtitle={subtitle}
-        accountName={tenantName}
+        subtitle={subtitle ?? `حساب ${PRODUCT_NAME} الخاص بـ ${tenantName}`}
+        accountName={`حساب ${tenantName}`}
         roleLabel="لوحة المستأجر"
         status="online"
       />

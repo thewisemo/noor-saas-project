@@ -2,6 +2,7 @@ import './globals.css';
 import type { ReactNode } from 'react';
 import { Tajawal } from 'next/font/google';
 import ThemeProviderWrapper from '@/components/theme/ThemeProviderWrapper';
+import { PRODUCT_NAME, productTagline } from '@/config/branding';
 
 const tajawal = Tajawal({
   subsets: ['arabic', 'latin'],
@@ -11,8 +12,8 @@ const tajawal = Tajawal({
 });
 
 export const metadata = {
-  title: 'Noor • GHITHAK',
-  description: 'منصة نور متعددة المستأجرين لإدارة الطلبات، المناطق، والمحادثات.',
+  title: PRODUCT_NAME,
+  description: productTagline,
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

@@ -78,6 +78,9 @@ export default function AdminHome() {
           <Button variant="secondary" className="flex-1 min-w-[220px]" onClick={() => router.push('/admin/zones')}>
             تحديث رسوم التوصيل
           </Button>
+          <Button variant="ghost" className="flex-1 min-w-[220px]" onClick={() => router.push('/admin/staff')}>
+            إدارة فريق العمل
+          </Button>
         </div>
       </Card>
     </AdminShell>

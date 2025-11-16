@@ -3,7 +3,10 @@
 import { useRouter } from 'next/navigation';
 import ThemeToggle from '../theme/ThemeToggle';
 import Button from '@/components/ui/Button';
-import { useMemo } from 'react';
+import Image from 'next/image';
+import { useMemo, useEffect, useState } from 'react';
+import { useTheme } from 'next-themes';
+import { PRODUCT_NAME, productTagline, logoDark, logoLight } from '@/config/branding';
 
 type Props = {
   title: string;
@@ -24,13 +27,17 @@ const statusMap: Record<
 
 export default function DashboardHeader({
   title,
-  subtitle = 'منصة نور • GHITHAK متعددة المستأجرين',
-  accountName = 'حساب نور',
+  subtitle = productTagline,
+  accountName = PRODUCT_NAME,
   roleLabel = 'سوبر أدمن',
   status = 'online',
 }: Props) {
   const router = useRouter();
   const statusBadge = useMemo(() => statusMap[status], [status]);
+  const { theme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
 
   const logout = async () => {
     try {
@@ -48,11 +55,19 @@ export default function DashboardHeader({
     <header className="sticky top-0 z-40 border-b border-[var(--color-border)] bg-[var(--color-surface)]/90 backdrop-blur-xl">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-4">
         <div className="flex items-center gap-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-lg font-bold text-white shadow-lg shadow-indigo-500/30">
-            نور
+          <div className="relative h-12 w-32">
+            {mounted && (
+              <Image
+                src={theme === 'light' ? logoDark : logoLight}
+                alt={PRODUCT_NAME}
+                className="object-contain object-right"
+                fill
+                priority
+              />
+            )}
           </div>
           <div className="space-y-1 text-right">
-            <p className="text-sm uppercase tracking-[0.3em] text-[var(--color-muted)]">Noor • GHITHAK</p>
+            <p className="text-sm uppercase tracking-[0.3em] text-[var(--color-muted)]">{PRODUCT_NAME}</p>
             <h2 className="text-xl font-bold">{title}</h2>
             <p className="text-xs text-[var(--color-muted)]">{subtitle}</p>
           </div>
