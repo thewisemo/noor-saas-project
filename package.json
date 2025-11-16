@@ -1,0 +1,11 @@
+{
+  "name": "noor-saas-project",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "deploy:production": "npm run deploy:backend && npm run deploy:frontend",
+    "deploy:backend": "cd backend-nestjs && npm install && npm run build",
+    "deploy:frontend": "cd frontend-nextjs && npm install && npm run build"
+  }
+}
+
