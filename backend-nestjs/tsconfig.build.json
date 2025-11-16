@@ -11,5 +11,5 @@
     "declaration": false,
     "removeComments": true
   },
-  "exclude": ["node_modules", "test", "dist", "**/*spec.ts"]
+  "exclude": ["ormconfig.ts", "node_modules", "test", "dist", "**/*spec.ts"]
 }
