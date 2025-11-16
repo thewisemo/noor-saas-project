@@ -8,7 +8,7 @@ import {
   OnGatewayDisconnect,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { SOCKET_EVENTS } from '@shared/constants/socket-events';
+import { SOCKET_EVENTS } from '../shared/constants/socket-events';
 import { SocketAuthService } from '../sockets/socket-auth.service';
 import { IsEnum, IsString } from 'class-validator';
 import { OrderStatus } from '../database/entities/order.entity';
