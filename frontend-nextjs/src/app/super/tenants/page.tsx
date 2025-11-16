@@ -26,15 +26,23 @@ export default function TenantsPage() {
     }
   }, []);
 
-  const http = useCallback(() => ({ headers: { Authorization: `Bearer ${token}` } }), [token]);
+  const http = useCallback(() => {
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+    return { headers };
+  }, [token]);
+
+  const apiBase = '/front-api/super/tenants';
 
   const loadTenants = useCallback(() => {
     if (!token) return;
     axios
-      .get(`${process.env.NEXT_PUBLIC_API_URL}/tenants`, http())
+      .get(apiBase, http())
       .then(r => setList(r.data))
       .catch(() => setList([]));
-  }, [http, token]);
+  }, [apiBase, http, token]);
 
   useEffect(() => {
     if (token) {
@@ -48,7 +56,7 @@ export default function TenantsPage() {
     Object.entries(form).forEach(([key, value]) => {
       if (value.trim()) payload[key] = value.trim();
     });
-    const res = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/tenants`, payload, http());
+    const res = await axios.post(apiBase, payload, http());
     setList(prev => [...prev, res.data]);
     setForm(initialForm);
   }
@@ -69,14 +77,14 @@ export default function TenantsPage() {
     Object.entries(editForm).forEach(([key, value]) => {
       payload[key] = value.trim();
     });
-    const res = await axios.patch(`${process.env.NEXT_PUBLIC_API_URL}/tenants/${editingId}`, payload, http());
+    const res = await axios.patch(`${apiBase}/${editingId}`, payload, http());
     setList(prev => prev.map(t => (t.id === editingId ? res.data : t)));
     setEditingId(null);
   }
 
   async function deleteTenant(id: string) {
     if (!confirm('هل أنت متأكد من حذف هذا المستأجر؟')) return;
-    await axios.delete(`${process.env.NEXT_PUBLIC_API_URL}/tenants/${id}`, http());
+    await axios.delete(`${apiBase}/${id}`, http());
     setList(prev => prev.filter(t => t.id !== id));
   }
 

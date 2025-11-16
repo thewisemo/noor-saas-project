@@ -3,13 +3,16 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Tenant } from '../database/entities/tenant.entity';
 import { slugify } from '../utils/slugify';
+import { CreateTenantDto } from './dto/create-tenant.dto';
+import { UpdateTenantDto } from './dto/update-tenant.dto';
 
 @Injectable()
 export class TenantsService {
   constructor(@InjectRepository(Tenant) private readonly repo: Repository<Tenant>) {}
 
-  findAll() {
-    return this.repo.find({ order: { created_at: 'DESC' } });
+  async findAll() {
+    const tenants = await this.repo.find({ order: { created_at: 'DESC' } });
+    return tenants.map(t => this.toResponse(t));
   }
 
   async isSlugAvailable(slug: string) {
@@ -17,7 +20,7 @@ export class TenantsService {
     return !existing;
   }
 
-  async create(input: { name: string; slug?: string; domain?: string | null; whatsappPhoneNumberId?: string | null }) {
+  async create(input: CreateTenantDto) {
     if (!input.name?.trim()) {
       throw new BadRequestException('tenant-name-required');
     }
@@ -32,14 +35,13 @@ export class TenantsService {
       domain: input.domain?.trim() || null,
       whatsappPhoneNumberId: input.whatsappPhoneNumberId?.trim() || null,
       settings: {},
+      is_active: input.isActive ?? true,
     });
-    return this.repo.save(tenant);
+    const saved = await this.repo.save(tenant);
+    return this.toResponse(saved);
   }
 
-  async update(
-    id: string,
-    input: { name?: string; slug?: string; domain?: string | null; whatsappPhoneNumberId?: string | null },
-  ) {
+  async update(id: string, input: UpdateTenantDto) {
     const tenant = await this.repo.findOne({ where: { id } });
     if (!tenant) throw new NotFoundException('tenant-not-found');
 
@@ -60,7 +62,11 @@ export class TenantsService {
     if (input.whatsappPhoneNumberId !== undefined) {
       tenant.whatsappPhoneNumberId = input.whatsappPhoneNumberId?.trim() || null;
     }
-    return this.repo.save(tenant);
+    if (input.isActive !== undefined) {
+      tenant.is_active = input.isActive;
+    }
+    const saved = await this.repo.save(tenant);
+    return this.toResponse(saved);
   }
 
   async remove(id: string) {
@@ -68,5 +74,10 @@ export class TenantsService {
     if (!tenant) throw new NotFoundException('tenant-not-found');
     await this.repo.remove(tenant);
     return { deleted: true };
+  }
+
+  private toResponse(tenant: Tenant) {
+    const { is_active, ...rest } = tenant;
+    return { ...rest, isActive: is_active };
   }
 }

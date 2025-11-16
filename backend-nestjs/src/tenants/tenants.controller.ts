@@ -4,6 +4,8 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { UserRole } from '../database/entities/user.entity';
+import { CreateTenantDto } from './dto/create-tenant.dto';
+import { UpdateTenantDto } from './dto/update-tenant.dto';
 
 @Controller('tenants')
 export class TenantsController {
@@ -19,17 +21,14 @@ export class TenantsController {
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SUPER_ADMIN)
-  create(@Body() body: { name: string; slug?: string; domain?: string | null; whatsappPhoneNumberId?: string | null }) {
+  create(@Body() body: CreateTenantDto) {
     return this.tenantsService.create(body);
   }
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SUPER_ADMIN)
-  update(
-    @Param('id') id: string,
-    @Body() body: { name?: string; slug?: string; domain?: string | null; whatsappPhoneNumberId?: string | null },
-  ) {
+  update(@Param('id') id: string, @Body() body: UpdateTenantDto) {
     return this.tenantsService.update(id, body);
   }
 
