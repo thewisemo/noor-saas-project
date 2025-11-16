@@ -2,12 +2,17 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Card from '@/components/ui/Card';
+import Input from '@/components/ui/Input';
+import Button from '@/components/ui/Button';
+import Alert from '@/components/ui/Alert';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('admin@noor.system'); 
+  const [email, setEmail] = useState('admin@noor.system');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     try {
@@ -17,23 +22,26 @@ export default function LoginPage() {
         if (role === 'SUPER_ADMIN') router.replace('/super/tenants');
         else router.replace('/admin');
       }
-    } catch {}
+    } catch {
+      /* ignore */
+    }
   }, [router]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (loading) return;
     setLoading(true);
+    setError(null);
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
-        headers: { 'Content-Type':'application/json' },
-        body: JSON.stringify({ email, password })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
       });
 
       const d = await res.json().catch(() => ({}));
       if (!res.ok || !d?.token) {
-        alert(d?.message || 'فشل تسجيل الدخول');
+        setError(d?.message || 'فشل تسجيل الدخول، حاول مجددًا.');
         setLoading(false);
         return;
       }
@@ -45,51 +53,58 @@ export default function LoginPage() {
       localStorage.setItem('role', role);
       localStorage.setItem('tenant_id', tenantId);
 
-      const maxAge = 60 * 60 * 24 * 14; // 14 يوم
+      const maxAge = 60 * 60 * 24 * 14;
       document.cookie = `token=${d.token}; Path=/; Max-Age=${maxAge}; SameSite=Lax`;
       document.cookie = `role=${role}; Path=/; Max-Age=${maxAge}; SameSite=Lax`;
       document.cookie = `tenant_id=${tenantId}; Path=/; Max-Age=${maxAge}; SameSite=Lax`;
 
-      if (role === 'SUPER_ADMIN') router.replace('/super/tenants');
-      else router.replace('/admin');
-
+      router.replace(role === 'SUPER_ADMIN' ? '/super/tenants' : '/admin');
     } catch (err) {
       console.error(err);
-      alert('حصل خطأ غير متوقع');
+      setError('حصل خطأ غير متوقع. حاول لاحقًا.');
       setLoading(false);
     }
   }
 
   return (
-    <div style={{minHeight:'100vh',display:'grid',placeItems:'center',background:'#0b0b0b',color:'#fff'}}>
-      <form onSubmit={onSubmit} style={{width:360,maxWidth:'90vw',background:'#121212',padding:24,borderRadius:12,boxShadow:'0 0 0 1px #222 inset'}}>
-        <h2 style={{textAlign:'center',marginBottom:16}}>تسجيل الدخول</h2>
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-indigo-900 via-slate-950 to-slate-900 px-4 py-10 text-white">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(90,70,255,0.4),_transparent_50%)]" />
+      <div className="relative mx-auto flex max-w-6xl flex-col items-center gap-8">
+        <div className="text-center space-y-3">
+          <p className="text-sm uppercase tracking-[0.4em] text-white/70">Noor • GHITHAK</p>
+          <h1 className="text-4xl font-bold">مرحبا بعودتك إلى منصة نور</h1>
+          <p className="text-sm text-white/70">إدارة المستأجرين، الطلبات، والمحادثات من لوحة تحكم واحدة مؤمنة بالكامل.</p>
+        </div>
 
-        <label style={{display:'block',margin:'8px 0 4px'}}>الإيميل</label>
-        <input
-          value={email}
-          onChange={e=>setEmail(e.target.value)}
-          type="email"
-          required
-          style={{width:'100%',padding:'10px 12px',borderRadius:8,border:'1px solid #333',background:'#0f0f0f',color:'#fff'}}
-        />
+        <Card className="w-full max-w-md bg-white/95 text-gray-900 shadow-2xl backdrop-blur">
+          <form className="space-y-4" onSubmit={onSubmit}>
+            <div className="text-center space-y-1">
+              <p className="text-sm font-medium text-indigo-600">تسجيل الدخول إلى الحساب</p>
+              <h2 className="text-2xl font-bold text-gray-900">Noor • GHITHAK</h2>
+              <p className="text-xs text-gray-500">أدخل بياناتك للمتابعة إلى لوحة التحكم.</p>
+            </div>
 
-        <label style={{display:'block',margin:'12px 0 4px'}}>كلمة المرور</label>
-        <input
-          value={password}
-          onChange={e=>setPassword(e.target.value)}
-          type="password"
-          required
-          style={{width:'100%',padding:'10px 12px',borderRadius:8,border:'1px solid #333',background:'#0f0f0f',color:'#fff'}}
-        />
+            {error && <Alert variant="danger" message={error} />}
 
-        <button
-          disabled={loading}
-          style={{width:'100%',marginTop:16,padding:'10px 12px',borderRadius:8,border:'none',background:'#6c63ff',color:'#fff',cursor:'pointer'}}
-        >
-          {loading ? 'جارٍ الدخول…' : 'دخول'}
-        </button>
-      </form>
+            <Input label="البريد الإلكتروني" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
+            <Input
+              label="كلمة المرور"
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              required
+            />
+
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? 'جارٍ التحقق…' : 'تسجيل الدخول'}
+            </Button>
+            <p className="text-center text-xs text-gray-500">
+              بدخولك فأنت توافق على{' '}
+              <span className="font-semibold text-indigo-600">سياسات الخصوصية واستخدام المنصة</span>.
+            </p>
+          </form>
+        </Card>
+      </div>
     </div>
   );
 }

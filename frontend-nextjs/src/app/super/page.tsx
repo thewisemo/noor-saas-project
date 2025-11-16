@@ -1,6 +1,10 @@
 'use client';
 
 import DashboardHeader from '@/components/layout/DashboardHeader';
+import PageHeader from '@/components/ui/PageHeader';
+import Card from '@/components/ui/Card';
+import Button from '@/components/ui/Button';
+import { useRouter } from 'next/navigation';
 
 const highlights = [
   { label: 'المستأجرون النشطون', value: '12', delta: '+3 هذا الشهر' },
@@ -9,64 +13,76 @@ const highlights = [
 ];
 
 export default function SuperDashboard() {
+  const router = useRouter();
+
   return (
-    <div className="min-h-screen bg-[var(--bg)]">
-      <DashboardHeader title="لوحة السوبر أدمن" />
-      <main className="space-y-6 p-6">
-        <section className="glass-panel">
-          <div className="relative z-10 flex flex-col gap-3">
-            <p className="text-sm uppercase tracking-[0.2em] text-gray-300">مركز عمليات نور</p>
-            <h1 className="text-3xl font-bold">تحكم كامل في المستأجرين والمحادثات والطلبات من شاشة واحدة.</h1>
-            <p className="text-gray-200">
-              راقب الأداء الفوري، اعرف حالة الدردشة مع العملاء، وادفع العروض الترويجية في الوقت الفعلي.
-            </p>
-          </div>
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-l from-transparent to-black/30" />
-        </section>
+    <div className="min-h-screen bg-[var(--color-bg)]">
+      <DashboardHeader title="لوحة السوبر أدمن" accountName="Noor HQ" roleLabel="سوبر أدمن" />
+
+      <main className="mx-auto max-w-6xl space-y-8 px-4 py-8 sm:px-6">
+        <PageHeader
+          title="كل ما تحتاجه لمراقبة مستأجريك"
+          subtitle="تابع الأداء، اكتشف الأعطال، وادفع بالأتمتة إلى الأمام من خلال مركز نور التشغيلي."
+          badge="محدث لحظيًا"
+          actions={
+            <div className="flex flex-wrap gap-3">
+              <Button onClick={() => router.push('/super/tenants')}>إدارة المستأجرين</Button>
+              <Button variant="secondary" className="text-sm">
+                مشاركة رابط مع فريق GHITHAK
+              </Button>
+            </div>
+          }
+        />
 
         <section className="grid gap-4 md:grid-cols-3">
           {highlights.map(item => (
-            <div key={item.label} className="card space-y-3">
-              <p className="text-sm text-gray-400">{item.label}</p>
-              <p className="text-3xl font-bold">{item.value}</p>
-              <span className="text-xs text-emerald-400">{item.delta}</span>
-            </div>
+            <Card
+              key={item.label}
+              className="space-y-2 border-none bg-gradient-to-br from-white via-white to-indigo-50 text-gray-900 dark:from-[#12142b] dark:via-[#141733] dark:to-[#151b3d]"
+            >
+              <p className="text-sm text-gray-500 dark:text-white/70">{item.label}</p>
+              <p className="text-4xl font-extrabold">{item.value}</p>
+              <span className="text-xs text-emerald-500 dark:text-emerald-300">{item.delta}</span>
+            </Card>
           ))}
         </section>
 
         <section className="grid gap-4 lg:grid-cols-2">
-          <div className="card space-y-4">
-            <p className="text-lg font-semibold">حالة الأنظمة</p>
+          <Card title="حالة الأنظمة">
             <div className="space-y-3 text-sm">
-              <div className="flex items-center justify-between rounded-lg border border-gray-800/60 px-3 py-2">
-                <span>واجهة واتساب</span>
-                <span className="text-emerald-400">متصل</span>
-              </div>
-              <div className="flex items-center justify-between rounded-lg border border-gray-800/60 px-3 py-2">
-                <span>مركز الطلبات</span>
-                <span className="text-emerald-400">متصل</span>
-              </div>
-              <div className="flex items-center justify-between rounded-lg border border-gray-800/60 px-3 py-2">
-                <span>التكامل مع المستودع</span>
-                <span className="text-yellow-400">مراقبة</span>
-              </div>
+              {[
+                { label: 'واجهة واتساب', status: 'متصل', tone: 'text-emerald-500' },
+                { label: 'مركز الطلبات', status: 'متصل', tone: 'text-emerald-500' },
+                { label: 'التكامل مع المستودع', status: 'مراقبة', tone: 'text-amber-500' },
+              ].map(item => (
+                <div
+                  key={item.label}
+                  className="flex items-center justify-between rounded-2xl border px-3 py-2 text-[var(--color-text)]"
+                >
+                  <span>{item.label}</span>
+                  <span className={`text-sm font-semibold ${item.tone}`}>{item.status}</span>
+                </div>
+              ))}
             </div>
-          </div>
+          </Card>
 
-          <div className="card space-y-4">
-            <p className="text-lg font-semibold">الإجراءات السريعة</p>
+          <Card
+            title="الإجراءات السريعة"
+            description="نفّذ أهم المهام فورًا دون مغادرة هذه الشاشة."
+            actions={<span className="text-xs text-[var(--color-muted)]">آخر تحديث منذ ٣ دقائق</span>}
+          >
             <div className="grid gap-3 md:grid-cols-2">
-              <button className="rounded-2xl border border-gray-800/70 bg-gradient-to-br from-accent/40 to-accent/10 p-4 text-left text-sm font-semibold text-white shadow-lg transition hover:translate-y-0.5">
+              <Button className="w-full" onClick={() => router.push('/super/tenants')}>
                 إنشاء مستأجر جديد
-              </button>
-              <button className="rounded-2xl border border-gray-800/70 bg-gradient-to-br from-emerald-500/20 to-emerald-500/10 p-4 text-left text-sm font-semibold text-emerald-100 shadow-lg transition hover:translate-y-0.5">
+              </Button>
+              <Button variant="secondary" className="w-full">
                 إرسال تنبيه عاجل
-              </button>
+              </Button>
             </div>
-            <p className="text-xs text-gray-400">
+            <p className="mt-3 text-xs text-[var(--color-muted)]">
               للوصول الكامل إلى بيانات المستأجرين والتعديل عليهم، انتقل إلى صفحة إدارة المستأجرين.
             </p>
-          </div>
+          </Card>
         </section>
       </main>
     </div>

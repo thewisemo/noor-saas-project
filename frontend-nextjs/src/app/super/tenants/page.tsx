@@ -1,7 +1,13 @@
 'use client';
-import DashboardHeader from '@/components/layout/DashboardHeader';
+
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
-import { useCallback, useEffect, useState } from 'react';
+import DashboardHeader from '@/components/layout/DashboardHeader';
+import PageHeader from '@/components/ui/PageHeader';
+import Card from '@/components/ui/Card';
+import Input from '@/components/ui/Input';
+import Button from '@/components/ui/Button';
+import Alert from '@/components/ui/Alert';
 
 type Tenant = {
   id: string;
@@ -19,6 +25,8 @@ export default function TenantsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState(initialForm);
   const [token, setToken] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -28,9 +36,7 @@ export default function TenantsPage() {
 
   const http = useCallback(() => {
     const headers: Record<string, string> = {};
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
-    }
+    if (token) headers.Authorization = `Bearer ${token}`;
     return { headers };
   }, [token]);
 
@@ -40,25 +46,40 @@ export default function TenantsPage() {
     if (!token) return;
     axios
       .get(apiBase, http())
-      .then(r => setList(r.data))
-      .catch(() => setList([]));
+      .then(r => {
+        setList(r.data);
+        setError(null);
+      })
+      .catch(() => {
+        setError('تعذر تحميل المستأجرين. حاول لاحقًا.');
+        setList([]);
+      });
   }, [apiBase, http, token]);
 
   useEffect(() => {
-    if (token) {
-      loadTenants();
-    }
+    if (token) loadTenants();
   }, [loadTenants, token]);
 
   async function createTenant() {
-    if (!form.name.trim()) return alert('اكتب اسم المستأجر');
+    if (!form.name.trim()) {
+      setError('أدخل اسم المستأجر قبل الحفظ.');
+      return;
+    }
+    setLoading(true);
     const payload: Record<string, string> = {};
     Object.entries(form).forEach(([key, value]) => {
       if (value.trim()) payload[key] = value.trim();
     });
-    const res = await axios.post(apiBase, payload, http());
-    setList(prev => [...prev, res.data]);
-    setForm(initialForm);
+    try {
+      const res = await axios.post(apiBase, payload, http());
+      setList(prev => [...prev, res.data]);
+      setForm(initialForm);
+      setError(null);
+    } catch (err: any) {
+      setError(err?.response?.data?.message || 'تعذر إنشاء المستأجر، تحقق من البيانات.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   function startEdit(tenant: Tenant) {
@@ -77,100 +98,97 @@ export default function TenantsPage() {
     Object.entries(editForm).forEach(([key, value]) => {
       payload[key] = value.trim();
     });
-    const res = await axios.patch(`${apiBase}/${editingId}`, payload, http());
-    setList(prev => prev.map(t => (t.id === editingId ? res.data : t)));
-    setEditingId(null);
+    try {
+      const res = await axios.patch(`${apiBase}/${editingId}`, payload, http());
+      setList(prev => prev.map(t => (t.id === editingId ? res.data : t)));
+      setEditingId(null);
+      setError(null);
+    } catch (err: any) {
+      setError(err?.response?.data?.message || 'تعذر تعديل المستأجر.');
+    }
   }
 
   async function deleteTenant(id: string) {
     if (!confirm('هل أنت متأكد من حذف هذا المستأجر؟')) return;
-    await axios.delete(`${apiBase}/${id}`, http());
-    setList(prev => prev.filter(t => t.id !== id));
+    try {
+      await axios.delete(`${apiBase}/${id}`, http());
+      setList(prev => prev.filter(t => t.id !== id));
+      setError(null);
+    } catch {
+      setError('تعذر حذف المستأجر، حاول مرة أخرى.');
+    }
   }
 
+  const stats = useMemo(
+    () => [
+      { label: 'إجمالي المستأجرين', value: list.length.toString() },
+      { label: 'نطاقات مخصصة', value: `${list.filter(t => t.domain).length}` },
+      { label: 'تكامل واتساب', value: `${list.filter(t => t.whatsappPhoneNumberId).length}` },
+    ],
+    [list],
+  );
+
   return (
-    <div className="min-h-screen bg-[var(--bg)]">
-      <DashboardHeader title="إدارة المستأجرين" />
-      <main className="space-y-6 p-6">
-        <section className="glass-panel">
-          <div className="relative z-10 space-y-2">
-            <p className="text-xs uppercase tracking-[0.3em] text-gray-300">لوحة المستأجرين</p>
-            <h2 className="text-2xl font-bold">تحكم كامل في دورة حياة المستأجرين.</h2>
-            <p className="text-gray-200 text-sm">
-              أضف مستأجرًا جديدًا، حدّث معلومات الاتصال، أو قم بإيقاف أي نطاق بشكل فوري من داخل هذه الواجهة الحديثة.
-            </p>
-          </div>
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-accent/30 via-transparent to-emerald-400/10" />
+    <div className="min-h-screen bg-[var(--color-bg)]">
+      <DashboardHeader title="إدارة المستأجرين" accountName="Noor HQ" roleLabel="سوبر أدمن" />
+      <main className="mx-auto max-w-6xl space-y-8 px-4 py-8 sm:px-6">
+        <PageHeader
+          title="سيطر على المستأجرين، النطاقات، والتراخيص"
+          subtitle="أضف مستأجرًا جديدًا، حدّث نطاقه أو اربطه بالواجهات الخارجية مباشرة."
+          badge="مركز التحكم"
+        />
+
+        {error && <Alert variant="danger" message={error} />}
+
+        <section className="grid gap-4 sm:grid-cols-3">
+          {stats.map(stat => (
+            <Card key={stat.label} className="space-y-1 text-right">
+              <p className="text-sm text-[var(--color-muted)]">{stat.label}</p>
+              <p className="text-3xl font-bold">{stat.value}</p>
+            </Card>
+          ))}
         </section>
 
-        <section className="grid gap-6 lg:grid-cols-[2fr,3fr]">
-          <div className="card space-y-5">
-            <div>
-              <p className="text-lg font-semibold">إضافة مستأجر جديد</p>
-              <p className="text-sm text-gray-400">أدخل بيانات المستأجر الأساسية ثم اضغط تسجيل.</p>
-            </div>
-            <div className="space-y-3">
-              {['name', 'slug', 'domain', 'whatsappPhoneNumberId'].map(key => (
-                <div key={key} className="space-y-1 text-sm">
-                  <label className="text-gray-400">{labels[key as keyof typeof labels]}</label>
-                  <input
-                    className="w-full rounded-xl border border-gray-800 bg-transparent p-2 focus:border-accent focus:outline-none"
-                    value={(form as any)[key]}
-                    onChange={e => setForm(prev => ({ ...prev, [key]: e.target.value }))}
-                  />
-                </div>
-              ))}
-            </div>
-            <button
-              onClick={createTenant}
-              className="w-full rounded-2xl bg-accent px-4 py-2 text-sm font-semibold text-white shadow-lg hover:opacity-90"
-            >
-              حفظ المستأجر
-            </button>
-          </div>
-
-          <div className="card space-y-4 overflow-hidden">
-            <div className="flex items-center justify-between">
-              <p className="text-lg font-semibold">جميع المستأجرين</p>
-              <span className="text-sm text-gray-400">{list.length} عنصر</span>
-            </div>
+        <section className="grid gap-6 lg:grid-cols-[1.2fr,0.8fr]">
+          <Card
+            title="قائمة المستأجرين"
+            description="تابع نطاقاتهم وأرقام واتساب المرتبطة بهم."
+            actions={<span className="text-xs text-[var(--color-muted)]">{list.length} عنصر</span>}
+            className="overflow-hidden"
+          >
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[520px] text-sm">
+              <table className="w-full min-w-[560px] text-sm">
                 <thead>
-                  <tr className="text-gray-400">
+                  <tr className="text-[var(--color-muted)]">
                     <th className="pb-3 text-right font-medium">الاسم</th>
                     <th className="pb-3 text-right font-medium">النطاق</th>
-                    <th className="pb-3 text-right font-medium">واتساب</th>
+                    <th className="pb-3 text-right font-medium">WhatsApp ID</th>
                     <th className="pb-3 text-right font-medium">إجراءات</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-800">
+                <tbody className="divide-y divide-[var(--color-border)]">
                   {list.map(tenant => (
                     <tr key={tenant.id}>
                       <td className="py-3 font-semibold">{tenant.name}</td>
-                      <td className="py-3 text-gray-400">{tenant.domain || '-'}</td>
-                      <td className="py-3 text-gray-400 text-xs">{tenant.whatsappPhoneNumberId || '-'}</td>
+                      <td className="py-3 text-[var(--color-muted)]">{tenant.domain || '—'}</td>
+                      <td className="py-3 text-xs text-[var(--color-muted)]">
+                        {tenant.whatsappPhoneNumberId || 'لم يتم تعيينه'}
+                      </td>
                       <td className="py-3">
                         <div className="flex gap-2 text-xs">
-                          <button
-                            className="rounded-full border border-accent/60 px-3 py-1 text-accent"
-                            onClick={() => startEdit(tenant)}
-                          >
+                          <Button variant="secondary" className="px-3 py-1 text-xs" onClick={() => startEdit(tenant)}>
                             تعديل
-                          </button>
-                          <button
-                            className="rounded-full border border-red-500/60 px-3 py-1 text-red-300"
-                            onClick={() => deleteTenant(tenant.id)}
-                          >
+                          </Button>
+                          <Button variant="danger" className="px-3 py-1 text-xs" onClick={() => deleteTenant(tenant.id)}>
                             حذف
-                          </button>
+                          </Button>
                         </div>
                       </td>
                     </tr>
                   ))}
                   {!list.length && (
                     <tr>
-                      <td className="py-6 text-center text-gray-500" colSpan={4}>
+                      <td className="py-6 text-center text-[var(--color-muted)]" colSpan={4}>
                         لا يوجد مستأجرون حتى الآن.
                       </td>
                     </tr>
@@ -178,47 +196,54 @@ export default function TenantsPage() {
                 </tbody>
               </table>
             </div>
-          </div>
+          </Card>
+
+          <Card title="إضافة مستأجر جديد" description="أدخل البيانات الأساسية وانقر على حفظ.">
+            <div className="space-y-3">
+              {['name', 'slug', 'domain', 'whatsappPhoneNumberId'].map(key => (
+                <Input
+                  key={key}
+                  label={labels[key as keyof typeof labels]}
+                  value={(form as Record<string, string>)[key]}
+                  onChange={e => setForm(prev => ({ ...prev, [key]: e.target.value }))}
+                />
+              ))}
+            </div>
+            <Button onClick={createTenant} className="mt-4 w-full" disabled={loading}>
+              {loading ? 'جارٍ الحفظ…' : 'حفظ المستأجر'}
+            </Button>
+          </Card>
         </section>
 
         {editingId && (
-          <section className="card space-y-4 border-accent/50 shadow-lg shadow-accent/10">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-lg font-semibold">تعديل المستأجر</p>
-                <p className="text-sm text-gray-400">قم بتحديث البيانات واحفظها فورًا.</p>
-              </div>
-              <button className="text-sm text-gray-400 hover:text-white" onClick={() => setEditingId(null)}>
+          <Card
+            title="تعديل المستأجر"
+            description="قم بتحديث بيانات المستأجر الحالية واحفظها فورًا."
+            actions={
+              <button className="text-xs text-[var(--color-muted)] hover:text-[var(--color-text)]" onClick={() => setEditingId(null)}>
                 إغلاق
               </button>
-            </div>
+            }
+          >
             <div className="grid gap-3 md:grid-cols-2">
               {['name', 'slug', 'domain', 'whatsappPhoneNumberId'].map(key => (
-                <div key={key} className="space-y-1 text-sm">
-                  <label className="text-gray-400">{labels[key as keyof typeof labels]}</label>
-                  <input
-                    className="w-full rounded-xl border border-gray-800 bg-transparent p-2 focus:border-accent focus:outline-none"
-                    value={(editForm as any)[key]}
-                    onChange={e => setEditForm(prev => ({ ...prev, [key]: e.target.value }))}
-                  />
-                </div>
+                <Input
+                  key={key}
+                  label={labels[key as keyof typeof labels]}
+                  value={(editForm as Record<string, string>)[key]}
+                  onChange={e => setEditForm(prev => ({ ...prev, [key]: e.target.value }))}
+                />
               ))}
             </div>
-            <div className="flex gap-3">
-              <button
-                onClick={saveEdit}
-                className="rounded-2xl bg-accent px-4 py-2 text-sm font-semibold text-white shadow-lg hover:opacity-90"
-              >
+            <div className="mt-4 flex flex-wrap gap-3">
+              <Button onClick={saveEdit} className="flex-1 sm:flex-none sm:px-6">
                 حفظ التعديلات
-              </button>
-              <button
-                onClick={() => setEditingId(null)}
-                className="rounded-2xl border border-gray-800 px-4 py-2 text-sm text-gray-300"
-              >
+              </Button>
+              <Button variant="ghost" className="flex-1 sm:flex-none sm:px-6" onClick={() => setEditingId(null)}>
                 تراجع
-              </button>
+              </Button>
             </div>
-          </section>
+          </Card>
         )}
       </main>
     </div>
@@ -231,3 +256,4 @@ const labels: Record<string, string> = {
   domain: 'الدومين (اختياري)',
   whatsappPhoneNumberId: 'WhatsApp Phone ID',
 };
+
