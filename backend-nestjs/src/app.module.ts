@@ -15,6 +15,7 @@ import { AiModule } from './ai/ai.module';
 import { ZonesModule } from './zones/zones.module';
 import { ConversationsModule } from './conversations/conversations.module';
 import { ProductsModule } from './products/products.module';
+import { TenantUsersModule } from './tenant-users/tenant-users.module';
 import { envValidationSchema } from './config/env.validation';
 
 @Module({
@@ -45,6 +46,7 @@ import { envValidationSchema } from './config/env.validation';
     ZonesModule,
     ConversationsModule,
     ProductsModule,
+    TenantUsersModule,
   ],
   controllers: [HealthController, AppController],
   providers: [AppService],
