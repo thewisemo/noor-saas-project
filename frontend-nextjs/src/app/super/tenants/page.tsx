@@ -277,7 +277,7 @@ export default function TenantsPage() {
     try {
       const res = await fetch(`/front-api/super/tenants/${drawerTenant.id}/users`, {
         method: 'POST',
-        headers: jsonHeaders(),
+        headers: jsonHeaders().headers,
         body: JSON.stringify({
           name: userForm.fullName,
           email: userForm.email,
