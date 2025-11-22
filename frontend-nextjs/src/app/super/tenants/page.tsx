@@ -72,16 +72,21 @@ export default function TenantsPage() {
     }
   }, []);
 
-  const authHeaders = useMemo<HeadersInit>(() => {
+  const authHeaders = useMemo<Record<string, string>>(() => {
     const headers: Record<string, string> = {};
     if (token) headers.Authorization = `Bearer ${token}`;
     return headers;
   }, [token]);
 
-  const jsonHeaders = useCallback(() => ({
-    ...http().headers,
-    'Content-Type': 'application/json',
-  }), [http]);
+  const http = useCallback(() => ({ headers: authHeaders }), [authHeaders]);
+
+  const jsonHeaders = useCallback(
+    (): HeadersInit => ({
+      ...authHeaders,
+      'Content-Type': 'application/json',
+    }),
+    [authHeaders],
+  );
 
   const apiBase = '/front-api/super/tenants';
 
@@ -257,7 +262,7 @@ export default function TenantsPage() {
         setTenantUsersError(data?.message || 'تعذر تحميل المستخدمين');
         setTenantUsers([]);
       } else {
-        const admins = Array.isArray(data) ? data.filter((user: TenantUser) => user.role === 'TENANT_ADMIN') : [];
+        const admins = Array.isArray(data) ? data.filter((user: TenantUser) => user.role === TENANT_ADMIN_ROLE) : [];
         setTenantUsers(admins);
       }
     } catch (err) {
@@ -279,12 +284,12 @@ export default function TenantsPage() {
     try {
       const res = await fetch(`/front-api/super/tenants/${drawerTenant.id}/users`, {
         method: 'POST',
-        headers: jsonHeaders().headers,
+        headers: jsonHeaders(),
         body: JSON.stringify({
           name: userForm.fullName,
           email: userForm.email,
           password: userForm.initialPassword,
-          role: 'TENANT_ADMIN',
+          role: TENANT_ADMIN_ROLE,
         }),
       });
       const data = await res.json();
