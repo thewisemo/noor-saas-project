@@ -20,7 +20,7 @@ const navItems = [
   { label: 'الطلبات', href: '/admin/orders', icon: '🧾', disabled: true },
   { label: 'المندوبون', href: '/admin/drivers', icon: '🚚', disabled: true },
   { label: 'خدمة العملاء', href: '/service', icon: '💬' },
-  { label: 'الإعدادات', href: '/admin/settings', icon: '⚙️', disabled: true },
+  { label: 'الإعدادات', href: '/admin/settings', icon: '⚙️' },
 ];
 
 export default function AdminShell({ title, subtitle, children }: Props) {
