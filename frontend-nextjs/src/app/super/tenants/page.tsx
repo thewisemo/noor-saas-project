@@ -76,6 +76,11 @@ export default function TenantsPage() {
     return { headers };
   }, [token]);
 
+  const jsonHeaders = useCallback(() => ({
+    ...http().headers,
+    'Content-Type': 'application/json',
+  }), [http]);
+
   const apiBase = '/front-api/super/tenants';
 
   const loadTenants = useCallback(() => {
@@ -272,7 +277,7 @@ export default function TenantsPage() {
     try {
       const res = await fetch(`/front-api/super/tenants/${drawerTenant.id}/users`, {
         method: 'POST',
-        headers: http().headers,
+        headers: jsonHeaders().headers,
         body: JSON.stringify({
           name: userForm.fullName,
           email: userForm.email,

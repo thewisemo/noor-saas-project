@@ -16,8 +16,8 @@ export async function POST(req: NextRequest, { params }: { params: { tenantId: s
   const response = await fetch(`${SUPER_TENANTS_ENDPOINT}/${params.tenantId}/integrations/test`, {
     method: 'POST',
     headers: forwardHeaders(req),
-    body: JSON.stringify(body),
     cache: 'no-store',
+    body: JSON.stringify(body),
   });
   const contentType = response.headers.get('content-type') || '';
   const payload = contentType.includes('application/json') ? await response.json() : await response.text();
@@ -27,3 +27,4 @@ export async function POST(req: NextRequest, { params }: { params: { tenantId: s
   }
   return NextResponse.json(payload, { status: response.status });
 }
+
