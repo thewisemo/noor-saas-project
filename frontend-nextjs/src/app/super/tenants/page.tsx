@@ -40,6 +40,8 @@ type TenantUser = {
   is_active?: boolean;
 };
 
+const TENANT_ADMIN_ROLE = 'TENANT_ADMIN';
+
 const initialForm = { name: '', slug: '', domain: '', whatsappPhoneNumberId: '' };
 const integrationInitial = { whatsappPhoneNumberId: '', whatsappAccessToken: '', aiApiKey: '', aiModel: '' };
 
@@ -70,10 +72,10 @@ export default function TenantsPage() {
     }
   }, []);
 
-  const http = useCallback(() => {
+  const authHeaders = useMemo<HeadersInit>(() => {
     const headers: Record<string, string> = {};
     if (token) headers.Authorization = `Bearer ${token}`;
-    return { headers };
+    return headers;
   }, [token]);
 
   const jsonHeaders = useCallback(() => ({
@@ -248,7 +250,7 @@ export default function TenantsPage() {
     setTenantUsersError(null);
     try {
       const res = await fetch(`/front-api/super/tenants/${tenantId}/users`, {
-        headers: http().headers,
+        headers: authHeaders,
       });
       const data = await res.json();
       if (!res.ok) {
