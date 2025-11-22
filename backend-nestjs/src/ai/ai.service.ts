@@ -1,20 +1,18 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
+import { TenantIntegrationsService } from '../tenant-integrations/tenant-integrations.service';
 
 @Injectable()
 export class AiService {
   private readonly logger = new Logger(AiService.name);
-  private readonly model: string;
 
-  constructor(private readonly config: ConfigService) {
-    this.model = this.config.get<string>('OPENAI_MODEL', 'gpt-4o-mini');
-  }
+  constructor(private readonly integrations: TenantIntegrationsService) {}
 
-  async classifyMessage(prompt: string, intents: string[]) {
-    const apiKey = this.config.get<string>('OPENAI_API_KEY');
+  async classifyMessage(tenantId: string, prompt: string, intents: string[]) {
+    const { apiKey, model } = await this.integrations.getAiCredentials(tenantId);
     if (!apiKey) {
-      this.logger.warn('OPENAI_API_KEY not configured. Returning fallback intent.');
+      this.logger.warn(`OPENAI_API_KEY not configured for tenant ${tenantId}. Returning fallback intent.`);
+      await this.integrations.recordAiStatus(tenantId, 'missing-config', 'OPENAI_API_KEY not configured');
       return { intent: intents[0], reason: 'missing-openai-key' };
     }
 
@@ -26,7 +24,7 @@ Return JSON with { "intent": "<intent_from_list>", "product": "<optional product
       const response = await axios.post(
         'https://api.openai.com/v1/chat/completions',
         {
-          model: this.model,
+          model,
           response_format: { type: 'json_object' },
           messages: [
             { role: 'system', content: systemPrompt },
@@ -44,9 +42,13 @@ Return JSON with { "intent": "<intent_from_list>", "product": "<optional product
 
       const content = response.data?.choices?.[0]?.message?.content;
       if (!content) throw new Error('empty-openai-response');
-      return JSON.parse(content);
+      const parsed = JSON.parse(content);
+      await this.integrations.recordAiStatus(tenantId, 'ok', null);
+      return parsed;
     } catch (error) {
       this.logger.error('Failed to classify intent', error as Error);
+      const message = (error as Error)?.message || 'openai-fallback';
+      await this.integrations.recordAiStatus(tenantId, 'error', message);
       return { intent: intents[0], reason: 'openai-fallback' };
     }
   }

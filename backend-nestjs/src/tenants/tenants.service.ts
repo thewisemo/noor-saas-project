@@ -5,10 +5,14 @@ import { Tenant } from '../database/entities/tenant.entity';
 import { slugify } from '../utils/slugify';
 import { CreateTenantDto } from './dto/create-tenant.dto';
 import { UpdateTenantDto } from './dto/update-tenant.dto';
+import { TenantIntegrationsService } from '../tenant-integrations/tenant-integrations.service';
 
 @Injectable()
 export class TenantsService {
-  constructor(@InjectRepository(Tenant) private readonly repo: Repository<Tenant>) {}
+  constructor(
+    @InjectRepository(Tenant) private readonly repo: Repository<Tenant>,
+    private readonly integrations: TenantIntegrationsService,
+  ) {}
 
   async findAll() {
     const tenants = await this.repo.find({ order: { created_at: 'DESC' } });
@@ -38,6 +42,9 @@ export class TenantsService {
       is_active: input.isActive ?? true,
     });
     const saved = await this.repo.save(tenant);
+    await this.integrations.ensureIntegration(saved.id, {
+      whatsappPhoneNumberId: tenant.whatsappPhoneNumberId || undefined,
+    });
     return this.toResponse(saved);
   }
 
@@ -61,6 +68,9 @@ export class TenantsService {
     }
     if (input.whatsappPhoneNumberId !== undefined) {
       tenant.whatsappPhoneNumberId = input.whatsappPhoneNumberId?.trim() || null;
+      await this.integrations.ensureIntegration(id, {
+        whatsappPhoneNumberId: tenant.whatsappPhoneNumberId,
+      });
     }
     if (input.isActive !== undefined) {
       tenant.is_active = input.isActive;

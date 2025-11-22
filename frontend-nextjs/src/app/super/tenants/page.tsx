@@ -18,6 +18,20 @@ type Tenant = {
   whatsappPhoneNumberId?: string | null;
 };
 
+type TenantIntegration = {
+  tenantId: string;
+  whatsappPhoneNumberId?: string | null;
+  whatsappAccessToken?: string | null;
+  whatsappLastStatus?: string;
+  whatsappLastError?: string | null;
+  whatsappCheckedAt?: string | null;
+  aiApiKey?: string | null;
+  aiModel?: string | null;
+  aiLastStatus?: string;
+  aiLastError?: string | null;
+  aiCheckedAt?: string | null;
+};
+
 type TenantUser = {
   id: string;
   name: string;
@@ -26,6 +40,7 @@ type TenantUser = {
 };
 
 const initialForm = { name: '', slug: '', domain: '', whatsappPhoneNumberId: '' };
+const integrationInitial = { whatsappPhoneNumberId: '', whatsappAccessToken: '', aiApiKey: '', aiModel: '' };
 
 export default function TenantsPage() {
   const [list, setList] = useState<Tenant[]>([]);
@@ -41,6 +56,12 @@ export default function TenantsPage() {
   const [tenantUsersError, setTenantUsersError] = useState<string | null>(null);
   const [userSuccess, setUserSuccess] = useState<string | null>(null);
   const [userForm, setUserForm] = useState({ name: '', email: '', password: '' });
+  const [integrationTenant, setIntegrationTenant] = useState<Tenant | null>(null);
+  const [integrationForm, setIntegrationForm] = useState(integrationInitial);
+  const [integrationState, setIntegrationState] = useState<TenantIntegration | null>(null);
+  const [integrationLoading, setIntegrationLoading] = useState(false);
+  const [integrationError, setIntegrationError] = useState<string | null>(null);
+  const [integrationSuccess, setIntegrationSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -73,6 +94,73 @@ export default function TenantsPage() {
   useEffect(() => {
     if (token) loadTenants();
   }, [loadTenants, token]);
+
+  const loadIntegration = async (tenant: Tenant) => {
+    setIntegrationTenant(tenant);
+    setIntegrationLoading(true);
+    setIntegrationError(null);
+    setIntegrationSuccess(null);
+    try {
+      const res = await axios.get(`${apiBase}/${tenant.id}/integrations`, http());
+      setIntegrationForm({
+        whatsappPhoneNumberId: res.data.whatsappPhoneNumberId || '',
+        whatsappAccessToken: res.data.whatsappAccessToken || '',
+        aiApiKey: res.data.aiApiKey || '',
+        aiModel: res.data.aiModel || '',
+      });
+      setIntegrationState(res.data);
+    } catch (err: any) {
+      setIntegrationError(err?.response?.data?.message || 'تعذر تحميل بيانات التكامل');
+    } finally {
+      setIntegrationLoading(false);
+    }
+  };
+
+  const saveIntegration = async () => {
+    if (!integrationTenant) return;
+    setIntegrationLoading(true);
+    setIntegrationError(null);
+    setIntegrationSuccess(null);
+    try {
+      const res = await axios.put(`${apiBase}/${integrationTenant.id}/integrations`, integrationForm, http());
+      setIntegrationState(res.data);
+      setIntegrationSuccess('تم تحديث بيانات التكامل بنجاح.');
+      loadTenants();
+    } catch (err: any) {
+      setIntegrationError(err?.response?.data?.message || 'تعذر حفظ بيانات التكامل');
+    } finally {
+      setIntegrationLoading(false);
+    }
+  };
+
+  const testIntegration = async (target: 'whatsapp' | 'ai') => {
+    if (!integrationTenant) return;
+    setIntegrationLoading(true);
+    setIntegrationError(null);
+    setIntegrationSuccess(null);
+    try {
+      const headers = http().headers as Record<string, string>;
+      headers['Content-Type'] = 'application/json';
+      const res = await fetch(`${apiBase}/${integrationTenant.id}/integrations/test`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ target }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setIntegrationError(data?.message || 'فشل اختبار الاتصال');
+      }
+      await loadIntegration(integrationTenant);
+      if (res.ok) {
+        setIntegrationSuccess('تم تنفيذ اختبار الاتصال.');
+      }
+    } catch (err) {
+      console.error(err);
+      setIntegrationError('تعذر تنفيذ اختبار الاتصال');
+    } finally {
+      setIntegrationLoading(false);
+    }
+  };
 
   async function createTenant() {
     if (!form.name.trim()) {
@@ -258,6 +346,9 @@ export default function TenantsPage() {
                           <Button variant="danger" className="px-3 py-1 text-xs" onClick={() => deleteTenant(tenant.id)}>
                             حذف
                           </Button>
+                          <Button variant="secondary" className="px-3 py-1 text-xs" onClick={() => loadIntegration(tenant)}>
+                            التكاملات
+                          </Button>
                           <Button variant="ghost" className="px-3 py-1 text-xs" onClick={() => openTenantUsers(tenant)}>
                             حسابات الإدارة
                           </Button>
@@ -293,6 +384,103 @@ export default function TenantsPage() {
             </Button>
           </Card>
         </section>
+
+        {integrationTenant && (
+          <div className="fixed inset-0 z-40 flex items-start justify-center bg-black/30 px-4 py-8 backdrop-blur-sm">
+            <Card
+              title={`تكاملات ${integrationTenant.name}`}
+              description="تحديث مفاتيح واتساب والذكاء الاصطناعي واختبار الاتصال."
+              className="w-full max-w-4xl"
+              actions={
+                <button
+                  className="text-xs text-[var(--color-muted)] hover:text-[var(--color-text)]"
+                  onClick={() => {
+                    setIntegrationTenant(null);
+                    setIntegrationForm(integrationInitial);
+                    setIntegrationError(null);
+                    setIntegrationSuccess(null);
+                  }}
+                >
+                  إغلاق
+                </button>
+              }
+            >
+              {integrationError && <Alert variant="danger" message={integrationError} className="mb-3" />}
+              {integrationSuccess && <Alert variant="success" message={integrationSuccess} className="mb-3" />}
+
+              <div className="grid gap-3 md:grid-cols-2">
+                <Input
+                  label="WhatsApp Phone ID"
+                  value={integrationForm.whatsappPhoneNumberId}
+                  onChange={e => setIntegrationForm(prev => ({ ...prev, whatsappPhoneNumberId: e.target.value }))}
+                />
+                <Input
+                  label="WhatsApp Access Token"
+                  type="password"
+                  value={integrationForm.whatsappAccessToken}
+                  onChange={e => setIntegrationForm(prev => ({ ...prev, whatsappAccessToken: e.target.value }))}
+                />
+                <Input
+                  label="OpenAI API Key"
+                  type="password"
+                  value={integrationForm.aiApiKey}
+                  onChange={e => setIntegrationForm(prev => ({ ...prev, aiApiKey: e.target.value }))}
+                />
+                <Input
+                  label="OpenAI Model"
+                  value={integrationForm.aiModel}
+                  onChange={e => setIntegrationForm(prev => ({ ...prev, aiModel: e.target.value }))}
+                  placeholder="gpt-4o-mini"
+                />
+              </div>
+
+              <div className="mt-4 flex flex-wrap gap-3">
+                <Button onClick={saveIntegration} disabled={integrationLoading} className="flex-1 sm:flex-none sm:px-6">
+                  {integrationLoading ? 'جارٍ الحفظ…' : 'حفظ بيانات التكامل'}
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => testIntegration('whatsapp')}
+                  disabled={integrationLoading}
+                  className="flex-1 sm:flex-none sm:px-6"
+                >
+                  اختبار واتساب
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => testIntegration('ai')}
+                  disabled={integrationLoading}
+                  className="flex-1 sm:flex-none sm:px-6"
+                >
+                  اختبار الذكاء الاصطناعي
+                </Button>
+              </div>
+
+              <div className="mt-4 grid gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 text-sm text-[var(--color-muted)] md:grid-cols-2">
+                <div>
+                  <p className="font-semibold text-[var(--color-text)]">واتساب</p>
+                  <p>الحالة: {integrationState?.whatsappLastStatus || 'غير معروف'}</p>
+                  <p>
+                    آخر فحص:{' '}
+                    {integrationState?.whatsappCheckedAt
+                      ? new Date(integrationState.whatsappCheckedAt).toLocaleString()
+                      : '—'}
+                  </p>
+                  {integrationState?.whatsappLastError && <p className="text-red-500">{integrationState.whatsappLastError}</p>}
+                </div>
+                <div>
+                  <p className="font-semibold text-[var(--color-text)]">الذكاء الاصطناعي</p>
+                  <p>الحالة: {integrationState?.aiLastStatus || 'غير معروف'}</p>
+                  <p>
+                    آخر فحص:{' '}
+                    {integrationState?.aiCheckedAt ? new Date(integrationState.aiCheckedAt).toLocaleString() : '—'}
+                  </p>
+                  {integrationState?.aiLastError && <p className="text-red-500">{integrationState.aiLastError}</p>}
+                </div>
+              </div>
+            </Card>
+          </div>
+        )}
 
         {editingId && (
           <Card

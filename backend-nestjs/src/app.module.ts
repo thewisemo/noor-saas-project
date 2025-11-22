@@ -17,6 +17,7 @@ import { ConversationsModule } from './conversations/conversations.module';
 import { ProductsModule } from './products/products.module';
 import { TenantUsersModule } from './tenant-users/tenant-users.module';
 import { envValidationSchema } from './config/env.validation';
+import { TenantIntegrationsModule } from './tenant-integrations/tenant-integrations.module';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { envValidationSchema } from './config/env.validation';
     ConversationsModule,
     ProductsModule,
     TenantUsersModule,
+    TenantIntegrationsModule,
   ],
   controllers: [HealthController, AppController],
   providers: [AppService],
