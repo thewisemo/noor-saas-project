@@ -37,6 +37,7 @@ type TenantUser = {
   name: string;
   email: string;
   role: string;
+  is_active?: boolean;
 };
 
 const initialForm = { name: '', slug: '', domain: '', whatsappPhoneNumberId: '' };
@@ -55,7 +56,7 @@ export default function TenantsPage() {
   const [tenantUsersLoading, setTenantUsersLoading] = useState(false);
   const [tenantUsersError, setTenantUsersError] = useState<string | null>(null);
   const [userSuccess, setUserSuccess] = useState<string | null>(null);
-  const [userForm, setUserForm] = useState({ name: '', email: '', password: '' });
+  const [userForm, setUserForm] = useState({ fullName: '', email: '', initialPassword: '' });
   const [integrationTenant, setIntegrationTenant] = useState<Tenant | null>(null);
   const [integrationForm, setIntegrationForm] = useState(integrationInitial);
   const [integrationState, setIntegrationState] = useState<TenantIntegration | null>(null);
@@ -74,6 +75,11 @@ export default function TenantsPage() {
     if (token) headers.Authorization = `Bearer ${token}`;
     return { headers };
   }, [token]);
+
+  const jsonHeaders = useCallback(() => ({
+    ...http().headers,
+    'Content-Type': 'application/json',
+  }), [http]);
 
   const apiBase = '/front-api/super/tenants';
 
@@ -232,7 +238,7 @@ export default function TenantsPage() {
 
   const openTenantUsers = (tenant: Tenant) => {
     setDrawerTenant(tenant);
-    setUserForm({ name: '', email: '', password: '' });
+    setUserForm({ fullName: '', email: '', initialPassword: '' });
     setUserSuccess(null);
     loadTenantUsers(tenant.id);
   };
@@ -249,7 +255,8 @@ export default function TenantsPage() {
         setTenantUsersError(data?.message || 'تعذر تحميل المستخدمين');
         setTenantUsers([]);
       } else {
-        setTenantUsers(data);
+        const admins = Array.isArray(data) ? data.filter((user: TenantUser) => user.role === 'TENANT_ADMIN') : [];
+        setTenantUsers(admins);
       }
     } catch (err) {
       console.error(err);
@@ -261,7 +268,7 @@ export default function TenantsPage() {
 
   const createTenantAdmin = async () => {
     if (!drawerTenant) return;
-    if (!userForm.name.trim() || !userForm.email.trim() || !userForm.password.trim()) {
+    if (!userForm.fullName.trim() || !userForm.email.trim() || !userForm.initialPassword.trim()) {
       setTenantUsersError('أكمل جميع الحقول لإنشاء المستخدم.');
       return;
     }
@@ -270,11 +277,11 @@ export default function TenantsPage() {
     try {
       const res = await fetch(`/front-api/super/tenants/${drawerTenant.id}/users`, {
         method: 'POST',
-        headers: http().headers,
+        headers: jsonHeaders(),
         body: JSON.stringify({
-          name: userForm.name,
+          name: userForm.fullName,
           email: userForm.email,
-          password: userForm.password,
+          password: userForm.initialPassword,
           role: 'TENANT_ADMIN',
         }),
       });
@@ -282,8 +289,8 @@ export default function TenantsPage() {
       if (!res.ok) {
         setTenantUsersError(data?.message || 'تعذر إنشاء المستخدم');
       } else {
-        setUserSuccess('تم إنشاء حساب مشرف للمستأجر. أرسل البيانات الجديدة للعميل.');
-        setUserForm({ name: '', email: '', password: '' });
+        setUserSuccess('تم إنشاء حساب مشرف للمستأجر. شارك البريد الإلكتروني وكلمة المرور المبدئية مع العميل بطريقة آمنة.');
+        setUserForm({ fullName: '', email: '', initialPassword: '' });
         loadTenantUsers(drawerTenant.id);
       }
     } catch (err) {
@@ -532,7 +539,7 @@ export default function TenantsPage() {
 
             <Card
               title="المستخدمون الحاليون"
-              description="يمكن لكل مستأجر أن يمتلك أكثر من مشرف واحد."
+              description="يمكن لكل مستأجر أن يمتلك أكثر من مشرف واحد. القائمة تعرض حسابات Tenant Admin فقط."
               className="bg-[var(--color-card)]"
             >
               {tenantUsersLoading ? (
@@ -543,7 +550,9 @@ export default function TenantsPage() {
                     <li key={user.id} className="rounded-2xl border border-[var(--color-border)] px-3 py-2">
                       <p className="font-semibold">{user.name}</p>
                       <p className="text-xs text-[var(--color-muted)]">{user.email}</p>
-                      <p className="text-xs text-[var(--color-muted)]">{user.role}</p>
+                      <p className="text-xs text-[var(--color-muted)]">
+                        الدور: <span className="font-semibold text-[var(--color-text)]">{user.role}</span>
+                      </p>
                     </li>
                   ))}
                 </ul>
@@ -556,8 +565,8 @@ export default function TenantsPage() {
               <div className="space-y-3">
                 <Input
                   label="الاسم الكامل"
-                  value={userForm.name}
-                  onChange={e => setUserForm(prev => ({ ...prev, name: e.target.value }))}
+                  value={userForm.fullName}
+                  onChange={e => setUserForm(prev => ({ ...prev, fullName: e.target.value }))}
                 />
                 <Input
                   label="البريد الإلكتروني"
@@ -568,8 +577,8 @@ export default function TenantsPage() {
                 <Input
                   label="كلمة المرور المبدئية"
                   type="text"
-                  value={userForm.password}
-                  onChange={e => setUserForm(prev => ({ ...prev, password: e.target.value }))}
+                  value={userForm.initialPassword}
+                  onChange={e => setUserForm(prev => ({ ...prev, initialPassword: e.target.value }))}
                   hint="أرسل هذه الكلمة للمستأجر وسيقوم بتغييرها بعد تسجيل الدخول الأول."
                 />
                 <div className="text-xs text-[var(--color-muted)]">الدور: Tenant Admin</div>
@@ -577,6 +586,9 @@ export default function TenantsPage() {
               <Button className="mt-4 w-full" onClick={createTenantAdmin} disabled={tenantUsersLoading}>
                 حفظ الحساب
               </Button>
+              <p className="mt-2 text-xs text-[var(--color-muted)]">
+                بعد إنشاء الحساب، شارك البريد الإلكتروني وكلمة المرور المبدئية مع عميل المستأجر بطريقة آمنة.
+              </p>
             </Card>
           </div>
         </div>

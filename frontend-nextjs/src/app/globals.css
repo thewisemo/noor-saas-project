@@ -39,7 +39,7 @@
     background: var(--color-bg);
     color: var(--color-text);
     min-height: 100vh;
-    font-family: var(--font-tajawal), 'Cairo', 'Segoe UI', Tahoma, sans-serif;
+    font-family: 'Tajawal', 'Cairo', 'Segoe UI', Tahoma, sans-serif;
     transition: background 0.3s ease, color 0.3s ease;
   }
 
