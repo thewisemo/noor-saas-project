@@ -5,6 +5,20 @@ const API_BASE =
 
 const apiBaseUrl = API_BASE.replace(/\/$/, '');
 
+const sanitizeUser = (user: any) => ({
+  id: user?.id,
+  name: user?.name,
+  email: user?.email,
+  role: user?.role,
+  is_active: user?.is_active,
+});
+
+const sanitizePayload = (payload: any) => {
+  if (Array.isArray(payload)) return payload.map(sanitizeUser);
+  if (payload && typeof payload === 'object') return sanitizeUser(payload);
+  return payload;
+};
+
 const headersFrom = (req: NextRequest) => {
   const headers: Record<string, string> = { 'content-type': 'application/json' };
   const auth = req.headers.get('authorization');
@@ -24,7 +38,7 @@ async function proxy(req: NextRequest, tenantId: string, init: RequestInit) {
     const message = typeof payload === 'string' ? payload : payload?.message || 'request_failed';
     return NextResponse.json({ message }, { status: res.status });
   }
-  return NextResponse.json(payload, { status: res.status });
+  return NextResponse.json(sanitizePayload(payload), { status: res.status });
 }
 
 export async function GET(req: NextRequest, { params }: { params: { tenantId: string } }) {

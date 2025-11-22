@@ -36,7 +36,7 @@ export class TenantUsersService {
 
   async createTenantAdmin(tenantId: string, dto: CreateTenantUserDto) {
     await this.ensureTenantExists(tenantId);
-    return this.createUserForTenant(tenantId, dto, [UserRole.TENANT_ADMIN, UserRole.TENANT_ADMIN], UserRole.TENANT_ADMIN);
+    return this.createUserForTenant(tenantId, dto, [UserRole.TENANT_ADMIN], UserRole.TENANT_ADMIN);
   }
 
   async createTenantStaff(tenantId: string, dto: CreateTenantStaffDto) {
