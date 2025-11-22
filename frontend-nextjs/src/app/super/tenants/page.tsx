@@ -40,6 +40,8 @@ type TenantUser = {
   is_active?: boolean;
 };
 
+const TENANT_ADMIN_ROLE = 'TENANT_ADMIN';
+
 const initialForm = { name: '', slug: '', domain: '', whatsappPhoneNumberId: '' };
 const integrationInitial = { whatsappPhoneNumberId: '', whatsappAccessToken: '', aiApiKey: '', aiModel: '' };
 
@@ -255,7 +257,7 @@ export default function TenantsPage() {
         setTenantUsersError(data?.message || 'تعذر تحميل المستخدمين');
         setTenantUsers([]);
       } else {
-        const admins = Array.isArray(data) ? data.filter((user: TenantUser) => user.role === 'TENANT_ADMIN') : [];
+        const admins = Array.isArray(data) ? data.filter((user: TenantUser) => user.role === TENANT_ADMIN_ROLE) : [];
         setTenantUsers(admins);
       }
     } catch (err) {
@@ -282,7 +284,7 @@ export default function TenantsPage() {
           name: userForm.fullName,
           email: userForm.email,
           password: userForm.initialPassword,
-          role: 'TENANT_ADMIN',
+          role: TENANT_ADMIN_ROLE,
         }),
       });
       const data = await res.json();
