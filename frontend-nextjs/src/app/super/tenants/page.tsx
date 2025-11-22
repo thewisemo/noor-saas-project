@@ -72,16 +72,21 @@ export default function TenantsPage() {
     }
   }, []);
 
-  const http = useCallback(() => {
+  const authHeaders = useMemo<HeadersInit>(() => {
     const headers: Record<string, string> = {};
     if (token) headers.Authorization = `Bearer ${token}`;
-    return { headers };
+    return headers;
   }, [token]);
 
-  const jsonHeaders = useCallback((): HeadersInit => ({
-    ...http().headers,
-    'Content-Type': 'application/json',
-  }), [http]);
+  const http = useCallback(() => ({ headers: authHeaders }), [authHeaders]);
+
+  const jsonHeaders = useMemo<HeadersInit>(
+    () => ({
+      ...authHeaders,
+      'Content-Type': 'application/json',
+    }),
+    [authHeaders],
+  );
 
   const apiBase = '/front-api/super/tenants';
 
@@ -250,7 +255,7 @@ export default function TenantsPage() {
     setTenantUsersError(null);
     try {
       const res = await fetch(`/front-api/super/tenants/${tenantId}/users`, {
-        headers: http().headers,
+        headers: authHeaders,
       });
       const data = await res.json();
       if (!res.ok) {
@@ -279,7 +284,7 @@ export default function TenantsPage() {
     try {
       const res = await fetch(`/front-api/super/tenants/${drawerTenant.id}/users`, {
         method: 'POST',
-        headers: jsonHeaders(),
+        headers: jsonHeaders,
         body: JSON.stringify({
           name: userForm.fullName,
           email: userForm.email,
