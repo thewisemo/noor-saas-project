@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { QueryFailedError, Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User, UserRole } from '../database/entities/user.entity';
 import { Tenant } from '../database/entities/tenant.entity';
@@ -17,7 +17,7 @@ export class TenantUsersService {
   async listUsersByTenant(tenantId: string) {
     await this.ensureTenantExists(tenantId);
     const users = await this.usersRepo.find({
-      where: { tenant_id: tenantId },
+      where: { tenant_id: tenantId, role: UserRole.TENANT_ADMIN },
       order: { created_at: 'DESC' },
     });
     return users.map(user => this.toSafeUser(user));
@@ -73,8 +73,15 @@ export class TenantUsersService {
       password_hash: await bcrypt.hash(dto.password, 10),
     });
 
-    const saved = await this.usersRepo.save(user);
-    return this.toSafeUser(saved);
+    try {
+      const saved = await this.usersRepo.save(user);
+      return this.toSafeUser(saved);
+    } catch (error) {
+      if (error instanceof QueryFailedError) {
+        throw new BadRequestException('email-already-exists');
+      }
+      throw error;
+    }
   }
 
   private async ensureTenantExists(tenantId: string) {
