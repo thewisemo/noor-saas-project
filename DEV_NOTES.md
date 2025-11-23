@@ -30,6 +30,7 @@
 cp env.example .env           # add DB URL + API keys (local-safe values only)
 npm install
 npm run build
+npm run migration:run         # apply new TypeORM migrations (production uses TYPEORM_SYNC=false)
 npm run start:dev             # or npm run start:prod after build
 ```
 - Build uses `tsc -p tsconfig.build.json`. Only files under `src/` compile; `ormconfig.ts`, tests, and specs are excluded.
