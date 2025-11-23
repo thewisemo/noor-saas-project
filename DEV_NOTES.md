@@ -33,6 +33,12 @@ npm run build
 npm run migration:run         # apply new TypeORM migrations (production uses TYPEORM_SYNC=false)
 npm run start:dev             # or npm run start:prod after build
 ```
+- **Production update checklist (after pulling latest main):**
+  ```bash
+  npm install --prefix backend-nestjs
+  npm run build --prefix backend-nestjs
+  npm run migration:run --prefix backend-nestjs
+  ```
 - Build uses `tsc -p tsconfig.build.json`. Only files under `src/` compile; `ormconfig.ts`, tests, and specs are excluded.
 - PM2: `pm2 start ecosystem.config.js --only noor-backend` (runs `dist/main.js` with `NODE_ENV=production`).
 - Build output entry lives at `backend-nestjs/dist/main.js`; if a build ever finishes without that file, rerun `npm run build` to surface the error (a postbuild check now fails fast when the entry is missing). After building, restart with `pm2 restart noor-backend`.
