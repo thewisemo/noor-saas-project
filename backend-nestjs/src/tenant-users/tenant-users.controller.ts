@@ -2,6 +2,7 @@ import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { TenantUsersService } from './tenant-users.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { TenantGuard } from '../auth/guards/tenant.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../database/entities/user.entity';
 import { CreateTenantUserDto } from './dto/create-tenant-user.dto';
@@ -9,7 +10,7 @@ import { CreateTenantStaffDto } from './dto/create-tenant-staff.dto';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @Controller()
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, TenantGuard)
 export class TenantUsersController {
   constructor(private readonly service: TenantUsersService) {}
 
@@ -37,4 +38,3 @@ export class TenantUsersController {
     return this.service.createTenantStaff(tenantId || '', dto);
   }
 }
-

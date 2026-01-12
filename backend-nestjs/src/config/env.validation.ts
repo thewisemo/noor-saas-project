@@ -5,7 +5,9 @@ export const envValidationSchema = Joi.object({
   PORT: Joi.number().port().default(3001),
   DATABASE_URL: Joi.string().uri({ scheme: ['postgres', 'postgresql'] }).required(),
   JWT_SECRET: Joi.string().min(32).required(),
+  NOOR_MASTER_KEY: Joi.string().required(),
   TYPEORM_SYNC: Joi.string().valid('true', 'false').default('false'),
+  ALLOW_DEFAULT_SUPER_ADMIN_SEED: Joi.string().valid('true', 'false').default('false'),
   SMS_PROVIDER_BASE_URL: Joi.string().uri({ scheme: [/https?/] }).optional(),
   SMS_PROVIDER_API_KEY: Joi.string().optional(),
   SMS_PROVIDER_SENDER_ID: Joi.string().optional(),
@@ -20,4 +22,3 @@ export const envValidationSchema = Joi.object({
   OTP_MAX_ATTEMPTS: Joi.number().integer().min(1).default(3),
   ENABLE_DEBUG_LOGS: Joi.boolean().truthy('true').falsy('false').default(false),
 }).unknown(true);
-

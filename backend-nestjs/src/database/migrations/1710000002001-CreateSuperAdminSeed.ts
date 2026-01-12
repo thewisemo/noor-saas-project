@@ -5,6 +5,9 @@ export class CreateSuperAdminSeed1710000002001 implements MigrationInterface {
   name = 'CreateSuperAdminSeed1710000002001';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    if (process.env.ALLOW_DEFAULT_SUPER_ADMIN_SEED !== 'true') {
+      return;
+    }
     const email = process.env.SUPER_ADMIN_EMAIL ?? 'superadmin@ghithak.com.sa';
     const password = process.env.SUPER_ADMIN_PASSWORD ?? 'Ghithak@2025';
     const passwordHash = await bcrypt.hash(password, 12);

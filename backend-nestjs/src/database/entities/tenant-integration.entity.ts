@@ -12,33 +12,33 @@ export class TenantIntegration extends BaseEntity {
   @Column({ type: 'uuid', unique: true })
   tenant_id: string;
 
-  @Column({ type: 'varchar', length: 64, nullable: true })
+  @Column({ name: 'whatsapp_phone_number_id', type: 'varchar', length: 64, nullable: true })
   whatsappPhoneNumberId?: string | null;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ name: 'whatsapp_access_token', type: 'text', nullable: true })
   whatsappAccessToken?: string | null;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ name: 'ai_api_key', type: 'text', nullable: true })
   aiApiKey?: string | null;
 
-  @Column({ type: 'varchar', length: 120, nullable: true })
+  @Column({ name: 'ai_model', type: 'varchar', length: 120, nullable: true })
   aiModel?: string | null;
 
-  @Column({ type: 'varchar', length: 32, default: 'unknown' })
+  @Column({ name: 'whatsapp_last_status', type: 'varchar', length: 32, default: 'unknown' })
   whatsappLastStatus!: string;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ name: 'whatsapp_last_error', type: 'text', nullable: true })
   whatsappLastError?: string | null;
 
-  @Column({ type: 'timestamptz', nullable: true })
+  @Column({ name: 'whatsapp_checked_at', type: 'timestamptz', nullable: true })
   whatsappCheckedAt?: Date | null;
 
-  @Column({ type: 'varchar', length: 32, default: 'unknown' })
+  @Column({ name: 'ai_last_status', type: 'varchar', length: 32, default: 'unknown' })
   aiLastStatus!: string;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ name: 'ai_last_error', type: 'text', nullable: true })
   aiLastError?: string | null;
 
-  @Column({ type: 'timestamptz', nullable: true })
+  @Column({ name: 'ai_checked_at', type: 'timestamptz', nullable: true })
   aiCheckedAt?: Date | null;
 }

@@ -6,6 +6,7 @@ import { Repository } from 'typeorm';
 import { TenantIntegration } from '../database/entities/tenant-integration.entity';
 import { Tenant } from '../database/entities/tenant.entity';
 import { UpdateTenantIntegrationDto } from './dto/update-tenant-integration.dto';
+import { EncryptionService } from '../utils/encryption.service';
 
 @Injectable()
 export class TenantIntegrationsService {
@@ -15,6 +16,7 @@ export class TenantIntegrationsService {
     @InjectRepository(TenantIntegration) private readonly repo: Repository<TenantIntegration>,
     @InjectRepository(Tenant) private readonly tenantsRepo: Repository<Tenant>,
     private readonly config: ConfigService,
+    private readonly encryption: EncryptionService,
   ) {}
 
   async ensureIntegration(tenantId: string, presets?: Partial<UpdateTenantIntegrationDto>) {
@@ -62,8 +64,14 @@ export class TenantIntegrationsService {
       tenant.whatsappPhoneNumberId = input.whatsappPhoneNumberId;
       await this.tenantsRepo.save(tenant);
     }
-    if (input.whatsappAccessToken !== undefined) integration.whatsappAccessToken = input.whatsappAccessToken;
-    if (input.aiApiKey !== undefined) integration.aiApiKey = input.aiApiKey;
+    if (input.whatsappAccessToken !== undefined) {
+      integration.whatsappAccessToken = input.whatsappAccessToken
+        ? this.encryption.encrypt(input.whatsappAccessToken)
+        : null;
+    }
+    if (input.aiApiKey !== undefined) {
+      integration.aiApiKey = input.aiApiKey ? this.encryption.encrypt(input.aiApiKey) : null;
+    }
     if (input.aiModel !== undefined) integration.aiModel = input.aiModel;
 
     const saved = await this.repo.save(integration);
@@ -93,16 +101,31 @@ export class TenantIntegrationsService {
     };
   }
 
+  async getMaskedIntegration(tenantId: string) {
+    const integration = await this.getIntegrationForTenant(tenantId);
+    return {
+      tenantId: integration.tenant_id,
+      whatsappPhoneNumberId: integration.whatsappPhoneNumberId,
+      whatsappAccessToken: this.encryption.mask(integration.whatsappAccessToken),
+      aiApiKey: this.encryption.mask(integration.aiApiKey),
+      aiModel: integration.aiModel,
+    };
+  }
+
   async getWhatsappCredentials(tenantId: string) {
     const integration = await this.getIntegrationForTenant(tenantId);
-    const token = integration.whatsappAccessToken || this.config.get<string>('WHATSAPP_ACCESS_TOKEN');
+    const token = integration.whatsappAccessToken
+      ? this.encryption.decrypt(integration.whatsappAccessToken)
+      : this.config.get<string>('WHATSAPP_ACCESS_TOKEN');
     const phoneNumberId = integration.whatsappPhoneNumberId || this.config.get<string>('WHATSAPP_PHONE_NUMBER_ID');
     return { integration, token, phoneNumberId };
   }
 
   async getAiCredentials(tenantId: string) {
     const integration = await this.getIntegrationForTenant(tenantId);
-    const apiKey = integration.aiApiKey || this.config.get<string>('OPENAI_API_KEY');
+    const apiKey = integration.aiApiKey
+      ? this.encryption.decrypt(integration.aiApiKey)
+      : this.config.get<string>('OPENAI_API_KEY');
     const model = integration.aiModel || this.config.get<string>('OPENAI_MODEL', 'gpt-4o-mini');
     return { integration, apiKey, model };
   }
@@ -176,11 +199,13 @@ export class TenantIntegrationsService {
     return {
       tenantId: integration.tenant_id,
       whatsappPhoneNumberId: integration.whatsappPhoneNumberId,
-      whatsappAccessToken: integration.whatsappAccessToken,
+      whatsappAccessToken: integration.whatsappAccessToken
+        ? this.encryption.decrypt(integration.whatsappAccessToken)
+        : null,
       whatsappLastStatus: integration.whatsappLastStatus,
       whatsappLastError: integration.whatsappLastError,
       whatsappCheckedAt: integration.whatsappCheckedAt,
-      aiApiKey: integration.aiApiKey,
+      aiApiKey: integration.aiApiKey ? this.encryption.decrypt(integration.aiApiKey) : null,
       aiModel: integration.aiModel,
       aiLastStatus: integration.aiLastStatus,
       aiLastError: integration.aiLastError,
