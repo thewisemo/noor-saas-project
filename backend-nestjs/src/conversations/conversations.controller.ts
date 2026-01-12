@@ -2,6 +2,7 @@ import { Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { ConversationsService } from './conversations.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { TenantGuard } from '../auth/guards/tenant.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../database/entities/user.entity';
 import { TenantId } from '../auth/decorators/tenant-id.decorator';
@@ -9,7 +10,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { ConversationStatus } from '../database/entities/conversation.entity';
 
 @Controller('conversations')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, TenantGuard)
 @Roles(UserRole.AGENT, UserRole.STAFF, UserRole.TENANT_ADMIN)
 export class ConversationsController {
   constructor(private readonly service: ConversationsService) {}
@@ -33,4 +34,3 @@ export class ConversationsController {
     return this.service.resolve(tenantId, id);
   }
 }
-

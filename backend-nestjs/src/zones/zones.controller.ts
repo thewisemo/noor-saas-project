@@ -2,6 +2,7 @@ import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@n
 import { ZonesService } from './zones.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { TenantGuard } from '../auth/guards/tenant.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../database/entities/user.entity';
 import { TenantId } from '../auth/decorators/tenant-id.decorator';
@@ -9,7 +10,7 @@ import { CreateZoneDto } from './dto/create-zone.dto';
 import { UpdateZoneDto } from './dto/update-zone.dto';
 
 @Controller('zones')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, TenantGuard)
 @Roles(UserRole.TENANT_ADMIN, UserRole.STAFF)
 export class ZonesController {
   constructor(private readonly service: ZonesService) {}
@@ -34,4 +35,3 @@ export class ZonesController {
     return this.service.remove(tenantId, id);
   }
 }
-

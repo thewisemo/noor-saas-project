@@ -5,6 +5,9 @@ export class CreateSuperAdminSeed1710000001000 implements MigrationInterface {
   name = 'CreateSuperAdminSeed1710000001000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    if (process.env.ALLOW_DEFAULT_SUPER_ADMIN_SEED !== 'true') {
+      return;
+    }
     const passwordHash = await bcrypt.hash('superadmin123', 12);
     await queryRunner.query(
       `
@@ -20,4 +23,3 @@ export class CreateSuperAdminSeed1710000001000 implements MigrationInterface {
     await queryRunner.query(`DELETE FROM "users" WHERE "email" = $1`, ['admin@noor.system']);
   }
 }
-
