@@ -1,10 +1,11 @@
 import { Controller, Get, Param, UseGuards } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { TenantGuard } from '../auth/guards/tenant.guard';
 import { TenantId } from '../auth/decorators/tenant-id.decorator';
 
 @Controller('products')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, TenantGuard)
 export class ProductsController {
   constructor(private readonly service: ProductsService) {}
 
@@ -13,4 +14,3 @@ export class ProductsController {
     return this.service.findAlternatives(tenantId, barcode);
   }
 }
-
