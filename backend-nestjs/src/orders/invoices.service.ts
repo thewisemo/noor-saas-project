@@ -47,33 +47,42 @@ export class InvoicesService {
   }
 
   async recordPayment(tenantId: string, invoiceId: string, dto: CreatePaymentDto) {
-    const invoice = await this.invoiceRepo.findOne({
-      where: { id: invoiceId, tenant_id: tenantId },
+    const updatedInvoiceId = await this.invoiceRepo.manager.transaction(async manager => {
+      const invoiceRepository = manager.getRepository(Invoice);
+      const paymentRepository = manager.getRepository(Payment);
+      const orderRepository = manager.getRepository(Order);
+
+      const invoice = await invoiceRepository.findOne({
+        where: { id: invoiceId, tenant_id: tenantId },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!invoice) throw new NotFoundException('invoice-not-found');
+
+      const payment = paymentRepository.create({
+        tenant_id: tenantId,
+        invoice_id: invoice.id,
+        order_id: invoice.order_id,
+        method: dto.method as PaymentMethod,
+        amount: dto.amount.toFixed(2),
+        status: PaymentStatus.PAID,
+      });
+
+      await paymentRepository.save(payment);
+
+      const amountPaid = Number(invoice.amount_paid) + dto.amount;
+      const totalAmount = Number(invoice.total_amount);
+      invoice.amount_paid = amountPaid.toFixed(2);
+      invoice.status = amountPaid >= totalAmount ? InvoiceStatus.PAID : InvoiceStatus.OPEN;
+      await invoiceRepository.save(invoice);
+
+      await orderRepository.update(
+        { id: invoice.order_id, tenant_id: tenantId },
+        { payment_status: invoice.status === InvoiceStatus.PAID ? PaymentStatus.PAID : PaymentStatus.PENDING },
+      );
+
+      return invoice.id;
     });
-    if (!invoice) throw new NotFoundException('invoice-not-found');
 
-    const payment = this.paymentRepo.create({
-      tenant_id: tenantId,
-      invoice_id: invoice.id,
-      order_id: invoice.order_id,
-      method: dto.method as PaymentMethod,
-      amount: dto.amount.toFixed(2),
-      status: PaymentStatus.PAID,
-    });
-
-    await this.paymentRepo.save(payment);
-
-    const amountPaid = Number(invoice.amount_paid) + dto.amount;
-    const totalAmount = Number(invoice.total_amount);
-    invoice.amount_paid = amountPaid.toFixed(2);
-    invoice.status = amountPaid >= totalAmount ? InvoiceStatus.PAID : InvoiceStatus.OPEN;
-    await this.invoiceRepo.save(invoice);
-
-    await this.orderRepo.update(
-      { id: invoice.order_id, tenant_id: tenantId },
-      { payment_status: invoice.status === InvoiceStatus.PAID ? PaymentStatus.PAID : PaymentStatus.PENDING },
-    );
-
-    return this.getInvoice(tenantId, invoice.id);
+    return this.getInvoice(tenantId, updatedInvoiceId);
   }
 }
