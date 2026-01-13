@@ -33,6 +33,12 @@ export class OrderItem extends BaseEntity {
   @Column({ type: 'uuid' })
   product_id: string;
 
+  @Column({ type: 'varchar', length: 150, nullable: true })
+  product_name?: string | null;
+
+  @Column({ type: 'varchar', length: 80, nullable: true })
+  product_sku?: string | null;
+
   @Column({ type: 'int' })
   quantity: number;
 
@@ -48,4 +54,3 @@ export class OrderItem extends BaseEntity {
   @Column({ type: 'jsonb', nullable: true })
   metadata?: Record<string, any> | null;
 }
-
