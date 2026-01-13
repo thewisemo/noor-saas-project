@@ -7,12 +7,13 @@ import { OrderItem } from './order-item.entity';
 import { Tenant } from './tenant.entity';
 
 export enum OrderStatus {
-  DRAFT = 'DRAFT',
+  NEW = 'NEW',
   CONFIRMED = 'CONFIRMED',
   PREPARING = 'PREPARING',
-  DISPATCHED = 'DISPATCHED',
+  READY = 'READY',
+  OUT_FOR_DELIVERY = 'OUT_FOR_DELIVERY',
   DELIVERED = 'DELIVERED',
-  CANCELLED = 'CANCELLED',
+  CANCELED = 'CANCELED',
 }
 
 export enum PaymentStatus {
@@ -53,7 +54,7 @@ export class Order extends BaseEntity {
   @Column({ type: 'uuid', nullable: true })
   zone_id: string | null;
 
-  @Column({ type: 'enum', enum: OrderStatus, default: OrderStatus.CONFIRMED })
+  @Column({ type: 'enum', enum: OrderStatus, default: OrderStatus.NEW })
   status: OrderStatus;
 
   @Column({ type: 'enum', enum: PaymentStatus, default: PaymentStatus.PENDING })
@@ -83,4 +84,3 @@ export class Order extends BaseEntity {
   @OneToMany(() => OrderItem, item => item.order)
   items: OrderItem[];
 }
-
