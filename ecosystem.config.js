@@ -3,8 +3,8 @@ module.exports = {
     {
       name: 'noor-backend',
       cwd: './backend-nestjs',
-      script: 'dist/main.js',
-      interpreter: 'node',
+      script: 'npm',
+      args: 'run start:prod',
       env: {
         NODE_ENV: 'production',
         PORT: 3001,

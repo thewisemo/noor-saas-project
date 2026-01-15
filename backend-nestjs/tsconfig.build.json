@@ -6,6 +6,6 @@
     "declaration": false,
     "removeComments": true
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*.ts", "src/main.ts"],
   "exclude": ["ormconfig.ts", "node_modules", "dist", "test", "**/*.spec.ts"]
 }

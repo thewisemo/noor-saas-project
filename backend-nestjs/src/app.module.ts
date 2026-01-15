@@ -2,8 +2,7 @@ import { HealthController } from './health.controller';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
-import { AppController } from './app.controller';
+import { SnakeNamingStrategy } from './database/utils/snake-naming.strategy';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { TenantsModule } from './tenants/tenants.module';
@@ -52,7 +51,7 @@ import { TenantIntegrationsModule } from './tenant-integrations/tenant-integrati
     TenantUsersModule,
     TenantIntegrationsModule,
   ],
-  controllers: [HealthController, AppController],
+  controllers: [HealthController],
   providers: [AppService],
 })
 export class AppModule {}
