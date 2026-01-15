@@ -16,5 +16,7 @@
     "skipLibCheck": true,
     "strictPropertyInitialization": false,
     "useDefineForClassFields": false
-  }
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "test", "**/*.spec.ts"]
 }
