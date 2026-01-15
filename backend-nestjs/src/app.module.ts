@@ -2,6 +2,7 @@ import { HealthController } from './health.controller';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
@@ -32,6 +33,7 @@ import { TenantIntegrationsModule } from './tenant-integrations/tenant-integrati
         type: 'postgres',
         url: cfg.get<string>('DATABASE_URL'),
         autoLoadEntities: true,
+        namingStrategy: new SnakeNamingStrategy(),
         synchronize: cfg.get<string>('TYPEORM_SYNC') === 'true',
       }),
       inject: [ConfigService],

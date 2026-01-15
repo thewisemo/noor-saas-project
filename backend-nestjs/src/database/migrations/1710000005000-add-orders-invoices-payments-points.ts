@@ -10,13 +10,21 @@ export class AddOrdersInvoicesPaymentsPoints1710000005000 implements MigrationIn
     await queryRunner.query(
       `CREATE TYPE "order_status_enum_new" AS ENUM ('NEW','CONFIRMED','PREPARING','READY','OUT_FOR_DELIVERY','DELIVERED','CANCELED');`,
     );
-    await queryRunner.query(`ALTER TABLE "orders" ALTER COLUMN "status" DROP DEFAULT;`);
-    await queryRunner.query(`UPDATE "orders" SET "status" = 'NEW' WHERE "status" = 'DRAFT';`);
-    await queryRunner.query(`UPDATE "orders" SET "status" = 'OUT_FOR_DELIVERY' WHERE "status" = 'DISPATCHED';`);
-    await queryRunner.query(`UPDATE "orders" SET "status" = 'CANCELED' WHERE "status" = 'CANCELLED';`);
-    await queryRunner.query(
-      `ALTER TABLE "orders" ALTER COLUMN "status" TYPE "order_status_enum_new" USING ("status"::text::"order_status_enum_new");`,
-    );
+await queryRunner.query(`ALTER TABLE "orders" ALTER COLUMN "status" DROP DEFAULT;`);
+
+await queryRunner.query(`
+  ALTER TABLE "orders"
+  ALTER COLUMN "status" TYPE "order_status_enum_new"
+  USING (
+    CASE "status"::text
+      WHEN 'DRAFT' THEN 'NEW'
+      WHEN 'DISPATCHED' THEN 'OUT_FOR_DELIVERY'
+      WHEN 'CANCELLED' THEN 'CANCELED'
+      ELSE "status"::text
+    END
+  )::"order_status_enum_new";
+`);
+
     await queryRunner.query(`DROP TYPE "order_status_enum";`);
     await queryRunner.query(`ALTER TYPE "order_status_enum_new" RENAME TO "order_status_enum";`);
     await queryRunner.query(`ALTER TABLE "orders" ALTER COLUMN "status" SET DEFAULT 'NEW';`);
