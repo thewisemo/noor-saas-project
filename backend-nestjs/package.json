@@ -6,7 +6,9 @@
     "build": "rimraf dist && tsc -p tsconfig.build.json",
     "start": "node dist/main.js",
     "start:dev": "nest start --watch",
+    "prestart:prod": "npm run build",
     "start:prod": "node dist/main.js",
+    "seed:dev": "NODE_ENV=production node --require ts-node/register ./scripts/seed-dev.ts",
     "migration:run": "NODE_ENV=production node --require ts-node/register ./node_modules/typeorm/cli.js migration:run -d ormconfig.ts",
     "postbuild": "node ./scripts/verify-dist-entry.js"
   },
