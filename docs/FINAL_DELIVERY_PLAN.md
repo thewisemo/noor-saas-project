@@ -11,18 +11,18 @@ Define a production-ready delivery plan for the Noor SaaS system, including a co
 ### Backend (NestJS)
 - **Module inventory:** Auth, Tenants, Users, Orders (gateway only), Socket, Tracking, WhatsApp, AI, Zones, Conversations, Products, Tenant Users, Tenant Integrations. (`backend-nestjs/src/app.module.ts`)
 - **Controllers present:** Auth, Tenants, Tenant Users, Tenant Integrations (admin + super), Conversations, Products, Zones, WhatsApp webhook, Tracking. (`backend-nestjs/src/**/**.controller.ts`)
-- **Orders API gap:** Orders module currently only exposes a socket gateway; no HTTP controllers/services for order creation, invoices, payments, or points ledger. (`backend-nestjs/src/orders/orders.gateway.ts`)
+- **Orders API:** HTTP controllers/services now cover order creation, status updates, invoices, payments, and loyalty points. (`backend-nestjs/src/orders/*.ts`)
 
 ### Database Schema & Migrations
 - **Entities present:** customers, conversations, orders, order items, products, inventory, promotions, tenants, tenant integrations, zones, branches, users. (`backend-nestjs/src/database/entities/*.entity.ts`)
-- **Missing entities:** invoices, payments, loyalty points/ledger, saved lists (customer lists), delivery fee rules, driver/preparer workflows.
+- **Entities include:** invoices, payments, and loyalty points ledger; remaining gaps are saved lists (customer lists), delivery fee rules, and driver/preparer workflows.
 - **Migrations exist** under `backend-nestjs/src/database/migrations`, including **two super admin seed migrations** with default credentials. (`backend-nestjs/src/database/migrations/1710000001000-create-super-admin-seed.ts`, `backend-nestjs/src/database/migrations/1710000002001-CreateSuperAdminSeed.ts`)
 - **TypeORM synchronize** is toggled by `TYPEORM_SYNC` in app module; production should rely only on migrations. (`backend-nestjs/src/app.module.ts`)
 
 ### WhatsApp + AI Integration
 - **Inbound webhook handler** processes messages and invokes AI classification. (`backend-nestjs/src/whatsapp/whatsapp.controller.ts`, `backend-nestjs/src/whatsapp/whatsapp.service.ts`)
 - **AI service** calls OpenAI Chat Completions with per-tenant credentials from integrations. (`backend-nestjs/src/ai/ai.service.ts`, `backend-nestjs/src/tenant-integrations/tenant-integrations.service.ts`)
-- **Tenant integrations** store WhatsApp/AI tokens in plaintext columns (requires encryption at rest). (`backend-nestjs/src/database/entities/tenant-integration.entity.ts`)
+- **Tenant integrations** store WhatsApp/AI tokens encrypted at rest with NOOR_MASTER_KEY; tenant admins receive masked values. (`backend-nestjs/src/tenant-integrations/tenant-integrations.service.ts`)
 
 ### Realtime & Tracking
 - **Socket gateways** for service console, orders status, and driver location updates. (`backend-nestjs/src/sockets/conversations.gateway.ts`, `backend-nestjs/src/orders/orders.gateway.ts`, `backend-nestjs/src/sockets/location.gateway.ts`)
@@ -51,13 +51,13 @@ Define a production-ready delivery plan for the Noor SaaS system, including a co
 - **Operations workflows:** Branches, zones, delivery fee rules, preparer workflow, driver workflow, real-time tracking (socket.io).
 - **Exports:** Hybrid synchronous/async export system with tenant and SUPER_ADMIN scope.
 - **Android apps:** Minimal 3-screen UX for driver + preparer with i18n (Arabic default, Hindi now, Bengali/English scaffolding).
-- **Orders + invoices + points:** No HTTP order API, invoice, payment, or points ledger models exist yet (only socket gateway + order entities). (`backend-nestjs/src/orders/orders.gateway.ts`, `backend-nestjs/src/database/entities/order.entity.ts`)
+- **Orders + invoices + points:** Core HTTP APIs now exist; remaining work is test coverage, reporting, and operational UX. (`backend-nestjs/src/orders/*.ts`)
 - **Saved lists:** No entities/endpoints for customer lists. (No list entities in `backend-nestjs/src/database/entities`)
 
 ### Security & Engineering
 - **Tenant isolation:** Enforce tenant_id checks across all tenant endpoints; SUPER_ADMIN cross-tenant access.
-- **Secrets at rest:** Ensure encryption with NOOR_MASTER_KEY; remove any plaintext storage.
-- **No insecure default admin:** Remove/disable default super admin seed; provide safe SUPER_ADMIN reset tool restricted to SUPER_ADMIN.
+- **Secrets at rest:** Encryption is required with NOOR_MASTER_KEY; migrate any legacy plaintext secrets.
+- **No insecure default admin:** Default super admin seeds must remain disabled in production; provide a safe SUPER_ADMIN reset tool restricted to SUPER_ADMIN.
 - **Migrations:** Required for all DB changes.
 - **Deployment docs:** Ubuntu 22.04 + nginx + pm2 including socket.io config.
 - **TypeORM sync:** `TYPEORM_SYNC` is supported but must remain false in production; enforce migrations-only workflow. (`backend-nestjs/src/app.module.ts`)
@@ -191,7 +191,7 @@ Define a production-ready delivery plan for the Noor SaaS system, including a co
 - Encrypt secrets at rest using NOOR_MASTER_KEY.
 - Remove/disable insecure default SUPER_ADMIN seed.
 - Add SUPER_ADMIN reset tool restricted to SUPER_ADMIN.
-- Encrypt tenant integration tokens stored in `tenant_integrations` (currently plaintext). (`backend-nestjs/src/database/entities/tenant-integration.entity.ts`)
+- Encrypt tenant integration tokens stored in `tenant_integrations` and migrate any legacy plaintext values. (`backend-nestjs/src/database/entities/tenant-integration.entity.ts`)
 
 **Acceptance Criteria**
 - Secrets are unreadable without master key.
@@ -206,7 +206,7 @@ Define a production-ready delivery plan for the Noor SaaS system, including a co
 
 **Acceptance Criteria**
 - Docs include step-by-step installation, env setup, process management, and nginx reverse proxy with socket.io.
-- Smoke tests verify core flows (auth, messaging, orders, exports).
+- Smoke tests verify core flows (auth, orders/invoices/payments/points, messaging, exports).
 
 ---
 
@@ -218,6 +218,7 @@ Define a production-ready delivery plan for the Noor SaaS system, including a co
 - [ ] Build backend + frontend + Android apps
 - [ ] Configure nginx reverse proxy + socket.io routes
 - [ ] Start services with pm2
+- [ ] Run smoke checks (`backend-nestjs/scripts/smoke-e2e.sh`) with SMOKE_* env vars
 - [ ] Verify health checks and logs
 
 ---
