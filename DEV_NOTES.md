@@ -43,6 +43,20 @@ npm run start:dev             # or npm run start:prod after build
 - PM2: `pm2 start ecosystem.config.js --only noor-backend` (runs `dist/main.js` with `NODE_ENV=production`).
 - Build output entry lives at `backend-nestjs/dist/main.js`; if a build ever finishes without that file, rerun `npm run build` to surface the error (a postbuild check now fails fast when the entry is missing). After building, restart with `pm2 restart noor-backend`.
 
+### Server reset + smoke (Ubuntu)
+```bash
+git checkout server/srv1020464-smoke-fix-20260115
+npm install --prefix backend-nestjs
+npm run build --prefix backend-nestjs
+
+# Reset DB (example: drop and recreate the database, then run migrations + seed)
+npm run migration:run --prefix backend-nestjs
+npm run seed:dev --prefix backend-nestjs
+
+pm2 restart noor-backend
+./backend-nestjs/scripts/smoke-e2e.sh
+```
+
 ### Frontend (`frontend-nextjs`)
 ```bash
 cp env.example .env.local     # define NEXT_PUBLIC_API_URL + API_BASE_URL
@@ -104,4 +118,3 @@ npm run build && npm start    # production preview
 - Add automated tests (unit + e2e) for tenants CRUD and websocket flows.
 - Extend `/front-api` proxy pattern to other admin calls for uniform CORS handling.
 - Move Android base URLs into build flavors to simplify environment switching.
-
