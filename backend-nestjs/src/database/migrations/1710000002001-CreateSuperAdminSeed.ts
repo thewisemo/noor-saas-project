@@ -6,6 +6,8 @@ export class CreateSuperAdminSeed1710000002001 implements MigrationInterface {
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     if (process.env.ALLOW_DEFAULT_SUPER_ADMIN_SEED !== 'true') {
+      // eslint-disable-next-line no-console
+      console.log('[migration] Default super admin seed skipped (ALLOW_DEFAULT_SUPER_ADMIN_SEED != true).');
       return;
     }
     const email = process.env.SUPER_ADMIN_EMAIL ?? 'superadmin@ghithak.com.sa';
@@ -18,6 +20,8 @@ export class CreateSuperAdminSeed1710000002001 implements MigrationInterface {
     );
 
     if (Array.isArray(existing) && existing.length > 0) {
+      // eslint-disable-next-line no-console
+      console.log(`[migration] Default super admin already exists (${email}).`);
       return;
     }
 
@@ -29,6 +33,8 @@ export class CreateSuperAdminSeed1710000002001 implements MigrationInterface {
       `,
       [null, 'Super Admin', email, passwordHash, 'SUPER_ADMIN', true],
     );
+    // eslint-disable-next-line no-console
+    console.log(`[migration] Default super admin seeded (${email}).`);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
