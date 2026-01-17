@@ -38,8 +38,18 @@ npm run start:dev             # or npm run start:prod after build
   npm install --prefix backend-nestjs
   npm run build --prefix backend-nestjs
   npm run migration:run --prefix backend-nestjs
+  pm2 restart noor-backend
+  SMOKE_BASE_URL=https://your.domain \
+    SMOKE_SUPER_ADMIN_EMAIL=superadmin@example.com \
+    SMOKE_SUPER_ADMIN_PASSWORD=replace-with-strong-password \
+    SMOKE_TENANT_NAME="Smoke Tenant" \
+    SMOKE_TENANT_SLUG="smoke-tenant" \
+    SMOKE_TENANT_ADMIN_EMAIL=tenant-admin-$(date +%s)@noor.test \
+    SMOKE_TENANT_ADMIN_PASSWORD=replace-with-strong-password \
+    SMOKE_PRODUCT_BARCODE=replace-with-barcode \
+    npm run smoke:e2e --prefix backend-nestjs
   ```
-- Build uses `tsc -p tsconfig.build.json`. Only files under `src/` compile; `ormconfig.ts`, tests, and specs are excluded.
+- Build uses `tsc -p tsconfig.build.json` and clears stale `tsconfig*.tsbuildinfo` before compiling. Only files under `src/` compile; `ormconfig.ts`, tests, and specs are excluded.
 - PM2: `pm2 start ecosystem.config.js --only noor-backend` (runs `dist/main.js` with `NODE_ENV=production`).
 - Build output entry lives at `backend-nestjs/dist/main.js`; if a build ever finishes without that file, rerun `npm run build` to surface the error (a postbuild check now fails fast when the entry is missing). After building, restart with `pm2 restart noor-backend`.
 
@@ -59,12 +69,10 @@ npm run build && npm start    # production preview
 - Preparer app: open `android-preparer-app` → configure backend base in `BuildConfig` before building.
 
 ## Auth & Tenancy Flow
-- Super admin seed (TypeORM migration `1710000001000-create-super-admin-seed.ts`):
-  - Email: `admin@noor.system`
-  - Password: `superadmin123`
+- Super admin seed migrations are gated by `ALLOW_DEFAULT_SUPER_ADMIN_SEED=true` and are blocked in production. Use `npm run seed:smoke --prefix backend-nestjs` only for local smoke setups.
 - Login steps:
   1. Run backend + frontend locally.
-  2. POST `/api/auth/login` (or use the login page) with the seed credentials → store JWT in `localStorage` (`token`).
+  2. POST `/api/auth/login` (or use the login page) with the seeded SUPER_ADMIN credentials (`SUPER_ADMIN_EMAIL`/`SUPER_ADMIN_PASSWORD` when running `seed:smoke`) → store JWT in `localStorage` (`token`).
   3. Visit `/super/tenants` to manage tenants via the new `/front-api/super/tenants` proxy.
 - Creating tenants:
   - Use the UI to create/patch/delete tenants; payloads support `name`, `slug`, `domain`, `whatsappPhoneNumberId`, and `isActive`.
@@ -89,6 +97,11 @@ npm run build && npm start    # production preview
 - `GET /api/tenants/check?slug=...` – slug availability.
 - `/front-api/super/tenants` mirrors the same contract for the frontend.
 
+## Smoke Testing
+- Canonical environment variables: `SMOKE_BASE_URL`, `SMOKE_SUPER_ADMIN_EMAIL`, `SMOKE_SUPER_ADMIN_PASSWORD`, `SMOKE_TENANT_NAME`, `SMOKE_TENANT_SLUG`, `SMOKE_TENANT_ADMIN_EMAIL`, `SMOKE_TENANT_ADMIN_PASSWORD`, `SMOKE_PRODUCT_BARCODE`.
+- Legacy fallbacks remain supported (`BASE_URL`, `SUPER_ADMIN_EMAIL`, `SUPER_ADMIN_PASSWORD`, `TENANT_NAME`, `TENANT_SLUG`, `TENANT_ADMIN_EMAIL`, `TENANT_ADMIN_PASSWORD`, `PRODUCT_BARCODE`).
+- Run with: `npm run smoke:e2e --prefix backend-nestjs` (uses `backend-nestjs/scripts/smoke-e2e.sh`).
+
 ## Final Summary
 ### Backend Fixes
 - Added typed DTOs for tenant create/update, wired validation, and returned camel-cased `isActive` responses.
@@ -104,4 +117,3 @@ npm run build && npm start    # production preview
 - Add automated tests (unit + e2e) for tenants CRUD and websocket flows.
 - Extend `/front-api` proxy pattern to other admin calls for uniform CORS handling.
 - Move Android base URLs into build flavors to simplify environment switching.
-

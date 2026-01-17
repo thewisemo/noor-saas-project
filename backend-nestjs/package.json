@@ -3,12 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "prebuild": "node ./scripts/clean-build-info.js",
     "build": "rimraf dist && tsc -p tsconfig.build.json",
     "start": "node dist/main.js",
     "start:dev": "nest start --watch",
     "start:prod": "node dist/main.js",
     "migration:run": "NODE_ENV=production node --require ts-node/register ./node_modules/typeorm/cli.js migration:run -d ormconfig.ts",
-    "postbuild": "node ./scripts/verify-dist-entry.js"
+    "postbuild": "node ./scripts/verify-dist-entry.js",
+    "seed:smoke": "ALLOW_DEFAULT_SUPER_ADMIN_SEED=true NODE_ENV=development node --require ts-node/register ./node_modules/typeorm/cli.js migration:run -d ormconfig.ts",
+    "smoke:e2e": "bash ./scripts/smoke-e2e.sh"
   },
   "dependencies": {
     "@nestjs/common": "^10.3.0",
