@@ -20,7 +20,7 @@ require_env() {
 }
 
 json_get() {
-  python3 - "$1" <<'PY'
+  python3 /dev/fd/3 "$1" 3<<'PY'
 import json
 import sys
 
@@ -82,7 +82,7 @@ TENANT_ID=$(printf '%s' "$TENANT_RESPONSE" | json_get id)
 if [[ -z "$TENANT_ID" ]]; then
   TENANTS_LIST=$(curl -sS -X GET "$BASE_URL/api/tenants" \
     -H "Authorization: Bearer $SUPER_TOKEN")
-  TENANT_ID=$(printf '%s' "$TENANTS_LIST" | python3 - "$TENANT_SLUG" <<'PY'
+  TENANT_ID=$(printf '%s' "$TENANTS_LIST" | python3 /dev/fd/3 "$TENANT_SLUG" 3<<'PY'
 import json
 import sys
 
@@ -183,9 +183,11 @@ POINTS_RESPONSE=$(curl -sS -X POST "$BASE_URL/api/customers/$CUSTOMER_ID/points/
   -H "Content-Type: application/json" \
   -d '{"delta":10,"reason":"smoke-adjustment"}')
 POINTS_BALANCE=$(printf '%s' "$POINTS_RESPONSE" | json_get balance)
-if [[ -z "$POINTS_BALANCE" ]]; then
-  echo "Loyalty points adjustment failed: $POINTS_RESPONSE" >&2
+POINTS_LEDGER_ID=$(printf '%s' "${POINTS_RESPONSE}" | json_get id)
+if [[ -z "$POINTS_LEDGER_ID" ]]; then
+  echo "Loyalty points adjustment failed: ${POINTS_RESPONSE}" >&2
   exit 1
 fi
+echo "[smoke] Loyalty points ledger id: $POINTS_LEDGER_ID"
 
 echo "\nSmoke E2E completed successfully."
