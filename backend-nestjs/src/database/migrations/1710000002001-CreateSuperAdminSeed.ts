@@ -5,6 +5,9 @@ export class CreateSuperAdminSeed1710000002001 implements MigrationInterface {
   name = 'CreateSuperAdminSeed1710000002001';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    if (process.env.NODE_ENV === 'production') {
+      return;
+    }
     if (process.env.ALLOW_DEFAULT_SUPER_ADMIN_SEED !== 'true') {
       // eslint-disable-next-line no-console
       console.log('[migration] Default super admin seed skipped (ALLOW_DEFAULT_SUPER_ADMIN_SEED != true).');

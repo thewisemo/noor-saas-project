@@ -1,294 +1,191 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-log() {
-  echo "[smoke] $*"
-}
+BASE_URL="${SMOKE_BASE_URL:-${BASE_URL:-}}"
+SUPER_ADMIN_EMAIL="${SMOKE_SUPER_ADMIN_EMAIL:-${SUPER_ADMIN_EMAIL:-}}"
+SUPER_ADMIN_PASSWORD="${SMOKE_SUPER_ADMIN_PASSWORD:-${SUPER_ADMIN_PASSWORD:-}}"
+TENANT_NAME="${SMOKE_TENANT_NAME:-${TENANT_NAME:-}}"
+TENANT_SLUG="${SMOKE_TENANT_SLUG:-${TENANT_SLUG:-}}"
+TENANT_ADMIN_EMAIL="${SMOKE_TENANT_ADMIN_EMAIL:-${TENANT_ADMIN_EMAIL:-}}"
+TENANT_ADMIN_PASSWORD="${SMOKE_TENANT_ADMIN_PASSWORD:-${TENANT_ADMIN_PASSWORD:-}}"
+PRODUCT_BARCODE="${SMOKE_PRODUCT_BARCODE:-${PRODUCT_BARCODE:-}}"
 
-fail() {
-  echo "[smoke] ERROR: $*" >&2
-  exit 1
-}
-
-use_smoke_env=0
-for var in SMOKE_BASE_URL SMOKE_SUPER_ADMIN_EMAIL SMOKE_SUPER_ADMIN_PASSWORD \
-  SMOKE_TENANT_NAME SMOKE_TENANT_SLUG SMOKE_TENANT_ADMIN_EMAIL \
-  SMOKE_TENANT_ADMIN_PASSWORD SMOKE_PRODUCT_BARCODE SMOKE_CUSTOMER_NAME \
-  SMOKE_CUSTOMER_PHONE; do
-  if [[ -n "${!var:-}" ]]; then
-    use_smoke_env=1
-    break
-  fi
-done
-
-if [[ $use_smoke_env -eq 1 ]]; then
-  BASE_URL=${SMOKE_BASE_URL:-http://127.0.0.1:3001}
-  SUPER_ADMIN_EMAIL=${SMOKE_SUPER_ADMIN_EMAIL:-admin@noor.system}
-  SUPER_ADMIN_PASSWORD=${SMOKE_SUPER_ADMIN_PASSWORD:-superadmin123}
-  TENANT_NAME=${SMOKE_TENANT_NAME:-"Smoke Tenant"}
-  TENANT_SLUG=${SMOKE_TENANT_SLUG:-"smoke-tenant"}
-  TENANT_ADMIN_EMAIL=${SMOKE_TENANT_ADMIN_EMAIL:-"smoke-admin@noor.system"}
-  TENANT_ADMIN_PASSWORD=${SMOKE_TENANT_ADMIN_PASSWORD:-"smokeadmin123"}
-  TENANT_ADMIN_NAME=${SMOKE_TENANT_ADMIN_NAME:-"Smoke Admin"}
-  PRODUCT_BARCODE=${SMOKE_PRODUCT_BARCODE:-"0000000000"}
-  CUSTOMER_NAME=${SMOKE_CUSTOMER_NAME:-"Smoke Customer"}
-  CUSTOMER_PHONE=${SMOKE_CUSTOMER_PHONE:-"+966555000000"}
-  log "Using SMOKE_ environment variables for smoke inputs."
-else
-  BASE_URL=${BASE_URL:-http://127.0.0.1:3001}
-  SUPER_ADMIN_EMAIL=${SUPER_ADMIN_EMAIL:-admin@noor.system}
-  SUPER_ADMIN_PASSWORD=${SUPER_ADMIN_PASSWORD:-superadmin123}
-  TENANT_NAME=${SEED_TENANT_NAME:-"Smoke Tenant"}
-  TENANT_SLUG=${SEED_TENANT_SLUG:-"smoke-tenant"}
-  TENANT_ADMIN_EMAIL=${TENANT_ADMIN_EMAIL:-"smoke-admin@noor.system"}
-  TENANT_ADMIN_PASSWORD=${TENANT_ADMIN_PASSWORD:-"smokeadmin123"}
-  TENANT_ADMIN_NAME=${TENANT_ADMIN_NAME:-"Smoke Admin"}
-  PRODUCT_BARCODE=${SEED_PRODUCT_BARCODE:-"0000000000"}
-  CUSTOMER_NAME=${CUSTOMER_NAME:-"Smoke Customer"}
-  CUSTOMER_PHONE=${CUSTOMER_PHONE:-"+966555000000"}
-  log "Using legacy environment variables for smoke inputs."
-fi
-
-API_BASE="${BASE_URL%/}/api"
-
-export SMOKE_TENANT_SLUG="$TENANT_SLUG"
-export SMOKE_TENANT_ADMIN_EMAIL="$TENANT_ADMIN_EMAIL"
-
-request() {
-  local method=$1
-  local url=$2
-  local token=${3:-}
-  local data=${4:-}
-  local response
-  local body
-  local status
-
-  if [[ -n "$data" ]]; then
-    if ! response=$(curl -sS -w "\n%{http_code}" -X "$method" \
-      -H 'Content-Type: application/json' \
-      ${token:+-H "Authorization: Bearer $token"} \
-      --data "$data" \
-      "$url"); then
-      fail "Request failed: $method $url"
-    fi
-  else
-    if ! response=$(curl -sS -w "\n%{http_code}" -X "$method" \
-      -H 'Content-Type: application/json' \
-      ${token:+-H "Authorization: Bearer $token"} \
-      "$url"); then
-      fail "Request failed: $method $url"
-    fi
-  fi
-
-  body=${response%$'\n'*}
-  status=${response##*$'\n'}
-
-  if [[ ! "$status" =~ ^[0-9]{3}$ ]]; then
-    echo "[smoke] Unexpected response status for $method $url: $status" >&2
-    echo "$body" >&2
+require_env() {
+  local name="$1"
+  local value="$2"
+  if [[ -z "$value" ]]; then
+    echo "Missing required env var: $name" >&2
     exit 1
   fi
-
-  if (( status >= 400 )); then
-    echo "[smoke] ERROR $method $url -> $status" >&2
-    echo "[smoke] Response body:" >&2
-    echo "$body" >&2
-    exit 1
-  fi
-
-  echo "$body"
 }
 
-request_with_status() {
-  local method=$1
-  local url=$2
-  local token=${3:-}
-  local data=${4:-}
-  local response
-
-  if [[ -n "$data" ]]; then
-    if ! response=$(curl -sS -w "\n%{http_code}" -X "$method" \
-      -H 'Content-Type: application/json' \
-      ${token:+-H "Authorization: Bearer $token"} \
-      --data "$data" \
-      "$url"); then
-      fail "Request failed: $method $url"
-    fi
-  else
-    if ! response=$(curl -sS -w "\n%{http_code}" -X "$method" \
-      -H 'Content-Type: application/json' \
-      ${token:+-H "Authorization: Bearer $token"} \
-      "$url"); then
-      fail "Request failed: $method $url"
-    fi
-  fi
-
-  local status=${response##*$'\n'}
-  if [[ ! "$status" =~ ^[0-9]{3}$ ]]; then
-    echo "[smoke] Unexpected response status for $method $url: $status" >&2
-    echo "${response%$'\n'*}" >&2
-    exit 1
-  fi
-
-  echo "$response"
-}
-
-json_eval() {
-  local body=$1
-  local expr=$2
-  local output
-  if ! output=$(python3 - "$body" "$expr" <<'PY'
+json_get() {
+  python3 - "$1" <<'PY'
 import json
-import os
 import sys
 
-body = sys.argv[1]
-expr = sys.argv[2]
-
+key = sys.argv[1]
 try:
-  data = json.loads(body)
-except Exception:
-  sys.exit(1)
-
-try:
-  value = eval(expr, {"json": data, "os": os})
-except Exception:
-  sys.exit(2)
-
-if value is None or value == "":
-  sys.exit(3)
-
-if isinstance(value, (dict, list)):
-  print(json.dumps(value))
+    data = json.load(sys.stdin)
+except json.JSONDecodeError:
+    sys.exit(0)
+for part in key.split('.'):
+    if isinstance(data, dict):
+        data = data.get(part)
+    else:
+        data = None
+        break
+if data is None:
+    sys.exit(0)
+if isinstance(data, (dict, list)):
+    print(json.dumps(data))
 else:
-  print(value)
+    print(data)
 PY
-); then
-    local code=$?
-    if [[ $code -eq 1 ]]; then
-      echo "[smoke] Non-JSON response while reading: $expr" >&2
-      echo "$body" >&2
-      exit 1
-    fi
-    if [[ $code -eq 3 ]]; then
-      echo "[smoke] Missing value for: $expr" >&2
-      echo "$body" >&2
-      exit 1
-    fi
-    echo "[smoke] Failed to evaluate expression: $expr" >&2
-    echo "$body" >&2
-    exit 1
-  fi
-  echo "$output"
 }
 
-json_optional() {
-  local body=$1
-  local expr=$2
-  local output
-  if ! output=$(python3 - "$body" "$expr" <<'PY'
+require_env SMOKE_BASE_URL "$BASE_URL"
+require_env SMOKE_SUPER_ADMIN_EMAIL "$SUPER_ADMIN_EMAIL"
+require_env SMOKE_SUPER_ADMIN_PASSWORD "$SUPER_ADMIN_PASSWORD"
+require_env SMOKE_TENANT_NAME "$TENANT_NAME"
+require_env SMOKE_TENANT_SLUG "$TENANT_SLUG"
+require_env SMOKE_TENANT_ADMIN_EMAIL "$TENANT_ADMIN_EMAIL"
+require_env SMOKE_TENANT_ADMIN_PASSWORD "$TENANT_ADMIN_PASSWORD"
+require_env SMOKE_PRODUCT_BARCODE "$PRODUCT_BARCODE"
+
+BASE_URL="${BASE_URL%/}"
+if [[ "$BASE_URL" == */api ]]; then
+  BASE_URL="${BASE_URL%/api}"
+fi
+
+log_step() {
+  echo "\n==> $1"
+}
+
+log_step "Logging in as super admin"
+SUPER_LOGIN=$(curl -sS -X POST "$BASE_URL/api/auth/login" \
+  -H "Content-Type: application/json" \
+  -d "{\"email\":\"$SUPER_ADMIN_EMAIL\",\"password\":\"$SUPER_ADMIN_PASSWORD\"}")
+SUPER_TOKEN=$(printf '%s' "$SUPER_LOGIN" | json_get token)
+if [[ -z "$SUPER_TOKEN" ]]; then
+  echo "Super admin login failed: $SUPER_LOGIN" >&2
+  exit 1
+fi
+
+log_step "Creating or loading tenant"
+TENANT_RESPONSE=$(curl -sS -X POST "$BASE_URL/api/tenants" \
+  -H "Authorization: Bearer $SUPER_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"name\":\"$TENANT_NAME\",\"slug\":\"$TENANT_SLUG\"}")
+TENANT_ID=$(printf '%s' "$TENANT_RESPONSE" | json_get id)
+
+if [[ -z "$TENANT_ID" ]]; then
+  TENANTS_LIST=$(curl -sS -X GET "$BASE_URL/api/tenants" \
+    -H "Authorization: Bearer $SUPER_TOKEN")
+  TENANT_ID=$(printf '%s' "$TENANTS_LIST" | python3 - "$TENANT_SLUG" <<'PY'
 import json
-import os
 import sys
 
-body = sys.argv[1]
-expr = sys.argv[2]
-
-try:
-  data = json.loads(body)
-except Exception:
-  sys.exit(1)
-
-try:
-  value = eval(expr, {"json": data, "os": os})
-except Exception:
-  sys.exit(2)
-
-if value is None or value == "":
-  sys.exit(0)
-
-if isinstance(value, (dict, list)):
-  print(json.dumps(value))
-else:
-  print(value)
+payload = json.load(sys.stdin)
+slug = sys.argv[1]
+for item in payload or []:
+    if item.get('slug') == slug:
+        print(item.get('id') or '')
+        sys.exit(0)
+print('')
 PY
-); then
-    local code=$?
-    if [[ $code -eq 1 ]]; then
-      echo "[smoke] Non-JSON response while reading: $expr" >&2
-      echo "$body" >&2
-      exit 1
-    fi
-    echo "[smoke] Failed to evaluate expression: $expr" >&2
-    echo "$body" >&2
-    exit 1
-  fi
-  echo "$output"
-}
-
-log "Logging in as super admin..."
-login_body=$(request POST "$API_BASE/auth/login" "" "{\"email\":\"$SUPER_ADMIN_EMAIL\",\"password\":\"$SUPER_ADMIN_PASSWORD\"}")
-SUPER_TOKEN=$(json_eval "$login_body" 'json.get("token")')
-
-log "Ensuring tenant exists..."
-tenants_body=$(request GET "$API_BASE/tenants" "$SUPER_TOKEN")
-tenant_id=$(json_optional "$tenants_body" 'next((t.get("id") for t in (json if isinstance(json, list) else (json.get("data") or json.get("tenants") or [])) if t.get("slug") == os.environ.get("SMOKE_TENANT_SLUG")), None)')
-
-if [[ -z "$tenant_id" ]]; then
-  create_tenant_body=$(request POST "$API_BASE/tenants" "$SUPER_TOKEN" "{\"name\":\"$TENANT_NAME\",\"slug\":\"$TENANT_SLUG\"}")
-  tenant_id=$(json_eval "$create_tenant_body" 'json.get("id")')
+)
 fi
 
-log "Ensuring tenant admin exists..."
-users_body=$(request GET "$API_BASE/tenants/$tenant_id/users" "$SUPER_TOKEN")
-admin_exists=$(json_optional "$users_body" 'next((u.get("id") for u in (json if isinstance(json, list) else (json.get("data") or json.get("users") or [])) if u.get("email") == os.environ.get("SMOKE_TENANT_ADMIN_EMAIL")), None)')
-
-if [[ -z "$admin_exists" ]]; then
-  create_response=$(request_with_status POST "$API_BASE/tenants/$tenant_id/users" "$SUPER_TOKEN" "{\"name\":\"$TENANT_ADMIN_NAME\",\"email\":\"$TENANT_ADMIN_EMAIL\",\"password\":\"$TENANT_ADMIN_PASSWORD\"}")
-  create_body=${create_response%$'\n'*}
-  create_status=${create_response##*$'\n'}
-  if [[ "$create_status" == "400" ]]; then
-    log "Tenant admin already exists; resolving existing user."
-    users_body=$(request GET "$API_BASE/tenants/$tenant_id/users" "$SUPER_TOKEN")
-    admin_exists=$(json_optional "$users_body" 'next((u.get("id") for u in (json if isinstance(json, list) else (json.get("data") or json.get("users") or [])) if u.get("email") == os.environ.get("SMOKE_TENANT_ADMIN_EMAIL")), None)')
-  elif (( create_status >= 400 )); then
-    echo "[smoke] ERROR POST $API_BASE/tenants/$tenant_id/users -> $create_status" >&2
-    echo "[smoke] Response body:" >&2
-    echo "$create_body" >&2
-    exit 1
-  fi
-fi
-
-log "Logging in as tenant admin..."
-tenant_login_body=$(request POST "$API_BASE/auth/login" "" "{\"email\":\"$TENANT_ADMIN_EMAIL\",\"password\":\"$TENANT_ADMIN_PASSWORD\"}")
-TENANT_TOKEN=$(json_eval "$tenant_login_body" 'json.get("token")')
-
-log "Resolving product by barcode..."
-product_body=$(request GET "$API_BASE/products/alternatives/$PRODUCT_BARCODE" "$TENANT_TOKEN")
-product_id=$(json_eval "$product_body" '((json.get("product") or {}).get("id")) or (json[0].get("id") if isinstance(json, list) and json else None) or (next((item.get("id") for item in (json.get("data") or json.get("products") or []) if isinstance(item, dict)), None))')
-
-log "Creating or fetching customer..."
-customer_body=$(request POST "$API_BASE/customers" "$TENANT_TOKEN" "{\"name\":\"$CUSTOMER_NAME\",\"phone\":\"$CUSTOMER_PHONE\"}")
-customer_id=$(json_eval "$customer_body" 'json.get("id")')
-
-log "Creating order..."
-order_body=$(request POST "$API_BASE/orders" "$TENANT_TOKEN" "{\"customer_id\":\"$customer_id\",\"items\":[{\"product_id\":\"$product_id\",\"quantity\":1}],\"delivery_fee\":0}")
-order_id=$(json_eval "$order_body" 'json.get("id")')
-order_total=$(json_eval "$order_body" 'json.get("total_amount") or json.get("totalAmount")')
-
-log "Creating invoice..."
-invoice_body=$(request POST "$API_BASE/orders/$order_id/invoice" "$TENANT_TOKEN")
-invoice_id=$(json_eval "$invoice_body" 'json.get("id")')
-invoice_total=$(json_eval "$invoice_body" 'json.get("total_amount") or json.get("totalAmount") or None')
-
-payment_total=${invoice_total:-$order_total}
-
-node -e 'const amount = Number(process.argv[1]); if (!Number.isFinite(amount) || amount <= 0) process.exit(1);' "$payment_total" || {
-  echo "[smoke] Invalid payment amount: $payment_total" >&2
+if [[ -z "$TENANT_ID" ]]; then
+  echo "Tenant creation failed: $TENANT_RESPONSE" >&2
   exit 1
-}
+fi
 
-log "Recording payment..."
-request POST "$API_BASE/invoices/$invoice_id/payments" "$TENANT_TOKEN" "{\"method\":\"CASH\",\"amount\":$payment_total}" >/dev/null
+log_step "Creating tenant admin"
+TENANT_ADMIN_RESPONSE=$(curl -sS -X POST "$BASE_URL/api/tenants/$TENANT_ID/users" \
+  -H "Authorization: Bearer $SUPER_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"name\":\"Smoke Tenant Admin\",\"email\":\"$TENANT_ADMIN_EMAIL\",\"password\":\"$TENANT_ADMIN_PASSWORD\",\"role\":\"TENANT_ADMIN\"}")
+TENANT_ADMIN_ID=$(printf '%s' "$TENANT_ADMIN_RESPONSE" | json_get id)
 
-log "PASS"
+if [[ -z "$TENANT_ADMIN_ID" ]]; then
+  echo "Tenant admin creation failed: $TENANT_ADMIN_RESPONSE" >&2
+  echo "Use a unique SMOKE_TENANT_ADMIN_EMAIL if the account already exists." >&2
+  exit 1
+fi
+
+log_step "Logging in as tenant admin"
+ADMIN_LOGIN=$(curl -sS -X POST "$BASE_URL/api/auth/login" \
+  -H "Content-Type: application/json" \
+  -d "{\"email\":\"$TENANT_ADMIN_EMAIL\",\"password\":\"$TENANT_ADMIN_PASSWORD\"}")
+ADMIN_TOKEN=$(printf '%s' "$ADMIN_LOGIN" | json_get token)
+if [[ -z "$ADMIN_TOKEN" ]]; then
+  echo "Tenant admin login failed: $ADMIN_LOGIN" >&2
+  exit 1
+fi
+
+log_step "Fetching product by barcode"
+PRODUCT_RESPONSE=$(curl -sS -X GET "$BASE_URL/api/products/alternatives/$PRODUCT_BARCODE" \
+  -H "Authorization: Bearer $ADMIN_TOKEN")
+PRODUCT_ID=$(printf '%s' "$PRODUCT_RESPONSE" | json_get product.id)
+if [[ -z "$PRODUCT_ID" ]]; then
+  echo "Product lookup failed: $PRODUCT_RESPONSE" >&2
+  exit 1
+fi
+
+log_step "Creating order"
+ORDER_RESPONSE=$(curl -sS -X POST "$BASE_URL/api/orders" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"customer\":{\"name\":\"Smoke Test\",\"phone\":\"+966500000000\"},\"items\":[{\"product_id\":\"$PRODUCT_ID\",\"quantity\":2}],\"delivery_fee\":5}")
+ORDER_ID=$(printf '%s' "$ORDER_RESPONSE" | json_get id)
+CUSTOMER_ID=$(printf '%s' "$ORDER_RESPONSE" | json_get customer.id)
+if [[ -z "$ORDER_ID" ]]; then
+  echo "Order creation failed: $ORDER_RESPONSE" >&2
+  exit 1
+fi
+
+log_step "Updating order status"
+STATUS_RESPONSE=$(curl -sS -X PATCH "$BASE_URL/api/orders/$ORDER_ID/status" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"status":"CONFIRMED"}')
+UPDATED_STATUS=$(printf '%s' "$STATUS_RESPONSE" | json_get status)
+if [[ "$UPDATED_STATUS" != "CONFIRMED" ]]; then
+  echo "Order status update failed: $STATUS_RESPONSE" >&2
+  exit 1
+fi
+
+log_step "Creating invoice"
+INVOICE_RESPONSE=$(curl -sS -X POST "$BASE_URL/api/orders/$ORDER_ID/invoice" \
+  -H "Authorization: Bearer $ADMIN_TOKEN")
+INVOICE_ID=$(printf '%s' "$INVOICE_RESPONSE" | json_get id)
+if [[ -z "$INVOICE_ID" ]]; then
+  echo "Invoice creation failed: $INVOICE_RESPONSE" >&2
+  exit 1
+fi
+
+log_step "Recording payment"
+PAYMENT_RESPONSE=$(curl -sS -X POST "$BASE_URL/api/invoices/$INVOICE_ID/payments" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"method":"CASH","amount":50}')
+PAID_STATUS=$(printf '%s' "$PAYMENT_RESPONSE" | json_get status)
+if [[ -z "$PAID_STATUS" ]]; then
+  echo "Payment failed: $PAYMENT_RESPONSE" >&2
+  exit 1
+fi
+
+log_step "Adjusting loyalty points"
+POINTS_RESPONSE=$(curl -sS -X POST "$BASE_URL/api/customers/$CUSTOMER_ID/points/adjust" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"delta":10,"reason":"smoke-adjustment"}')
+POINTS_BALANCE=$(printf '%s' "$POINTS_RESPONSE" | json_get balance)
+if [[ -z "$POINTS_BALANCE" ]]; then
+  echo "Loyalty points adjustment failed: $POINTS_RESPONSE" >&2
+  exit 1
+fi
+
+echo "\nSmoke E2E completed successfully."
