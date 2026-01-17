@@ -40,56 +40,21 @@ npm run start:dev             # or npm run start:prod after build
   npm run migration:run --prefix backend-nestjs
   ```
 - Build uses `tsc -p tsconfig.build.json`. Only files under `src/` compile; `ormconfig.ts`, tests, and specs are excluded.
-- PM2: `pm2 start ecosystem.config.js --only noor-backend` (invokes `npm run start:prod`, which builds and runs `dist/main.js` with `NODE_ENV=production`).
+- PM2: `pm2 start ecosystem.config.js --only noor-backend` (runs `dist/main.js` with `NODE_ENV=production`).
 - Build output entry lives at `backend-nestjs/dist/main.js`; if a build ever finishes without that file, rerun `npm run build` to surface the error (a postbuild check now fails fast when the entry is missing). After building, restart with `pm2 restart noor-backend`.
 
-### Database Reset + Seed Plan
-> Use only in local/dev or a controlled staging environment.
-
-1. **Stop the API** so there are no active connections.
-2. **Drop + recreate the schema** (examples use `psql`):
-   ```bash
-   psql "$DATABASE_URL" -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
-   ```
-3. **Run migrations** to rebuild tables:
-   ```bash
-   cd backend-nestjs
-   npm run migration:run
-   ```
-4. **Seed test data (idempotent):**
-   - Enable seed mode for local dev only:
-     ```bash
-     export ALLOW_DEFAULT_SUPER_ADMIN_SEED=true
-     export SUPER_ADMIN_EMAIL=admin@noor.system
-     export SUPER_ADMIN_PASSWORD=superadmin123
-     export SEED_TENANT_NAME="Noor Test Tenant"
-     export SEED_TENANT_SLUG=noor-test
-     export TENANT_ADMIN_EMAIL=tenant-admin@noor.test
-     export TENANT_ADMIN_PASSWORD=TenantAdmin123!
-     export SEED_PRODUCT_BARCODE=TEST-BARCODE
-     ```
-   - Run the seed script:
-     ```bash
-     npm run seed:dev
-     ```
-5. **Restart the API** and confirm health:
-   ```bash
-   pm2 restart noor-backend
-   curl -s http://localhost:3001/api/health
-   ```
-
-### End-to-end Smoke Test
+### Server reset + smoke (Ubuntu)
 ```bash
-cd backend-nestjs
-BASE_URL=http://localhost:3001 \
-SUPER_ADMIN_EMAIL=admin@noor.system \
-SUPER_ADMIN_PASSWORD=superadmin123 \
-SEED_TENANT_NAME="Noor Test Tenant" \
-SEED_TENANT_SLUG=noor-test \
-TENANT_ADMIN_EMAIL=tenant-admin@noor.test \
-TENANT_ADMIN_PASSWORD=TenantAdmin123! \
-SEED_PRODUCT_BARCODE=TEST-BARCODE \
-./scripts/smoke-e2e.sh
+git checkout server/srv1020464-smoke-fix-20260115
+npm install --prefix backend-nestjs
+npm run build --prefix backend-nestjs
+
+# Reset DB (example: drop and recreate the database, then run migrations + seed)
+npm run migration:run --prefix backend-nestjs
+npm run seed:dev --prefix backend-nestjs
+
+pm2 restart noor-backend
+./backend-nestjs/scripts/smoke-e2e.sh
 ```
 
 ### Frontend (`frontend-nextjs`)

@@ -18,6 +18,7 @@ import { ProductsModule } from './products/products.module';
 import { TenantUsersModule } from './tenant-users/tenant-users.module';
 import { envValidationSchema } from './config/env.validation';
 import { TenantIntegrationsModule } from './tenant-integrations/tenant-integrations.module';
+import { CustomersModule } from './customers/customers.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { TenantIntegrationsModule } from './tenant-integrations/tenant-integrati
     ProductsModule,
     TenantUsersModule,
     TenantIntegrationsModule,
+    CustomersModule,
   ],
   controllers: [HealthController],
   providers: [AppService],
