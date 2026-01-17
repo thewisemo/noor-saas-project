@@ -49,7 +49,13 @@ git checkout server/srv1020464-smoke-fix-20260115
 npm install --prefix backend-nestjs
 npm run build --prefix backend-nestjs
 
-# Reset DB (example: drop and recreate the database, then run migrations + seed)
+# Load env (DATABASE_URL, SUPER_ADMIN_EMAIL, SUPER_ADMIN_PASSWORD, etc.)
+set -a
+source .env
+set +a
+
+# Reset DB, migrate, seed, and run smoke
+psql "$DATABASE_URL" -c 'DROP SCHEMA public CASCADE; CREATE SCHEMA public;'
 npm run migration:run --prefix backend-nestjs
 npm run seed:dev --prefix backend-nestjs
 
