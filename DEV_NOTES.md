@@ -60,7 +60,17 @@ npm run migration:run --prefix backend-nestjs
 npm run seed:dev --prefix backend-nestjs
 
 pm2 restart noor-backend
+SMOKE_BASE_URL="http://127.0.0.1:3001" \
+SMOKE_SUPER_ADMIN_EMAIL="admin@noor.system" \
+SMOKE_SUPER_ADMIN_PASSWORD="superadmin123" \
+SMOKE_TENANT_NAME="Smoke Tenant" \
+SMOKE_TENANT_SLUG="smoke-tenant" \
+SMOKE_TENANT_ADMIN_EMAIL="smoke-admin@noor.system" \
+SMOKE_TENANT_ADMIN_PASSWORD="smokeadmin123" \
+SMOKE_PRODUCT_BARCODE="0000000000" \
 ./backend-nestjs/scripts/smoke-e2e.sh
+
+# Legacy env vars are still supported (BASE_URL, SUPER_ADMIN_EMAIL, SEED_TENANT_NAME, etc.)
 ```
 
 ### Frontend (`frontend-nextjs`)

@@ -1,25 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BASE_URL=${BASE_URL:-http://127.0.0.1:3001}
-API_BASE="${BASE_URL%/}/api"
-
-SUPER_ADMIN_EMAIL=${SUPER_ADMIN_EMAIL:-admin@noor.system}
-SUPER_ADMIN_PASSWORD=${SUPER_ADMIN_PASSWORD:-superadmin123}
-
-TENANT_NAME=${SMOKE_TENANT_NAME:-"Smoke Tenant"}
-TENANT_SLUG=${SMOKE_TENANT_SLUG:-"smoke-tenant"}
-TENANT_ADMIN_EMAIL=${SMOKE_TENANT_ADMIN_EMAIL:-"smoke-admin@noor.system"}
-TENANT_ADMIN_PASSWORD=${SMOKE_TENANT_ADMIN_PASSWORD:-"smokeadmin123"}
-TENANT_ADMIN_NAME=${SMOKE_TENANT_ADMIN_NAME:-"Smoke Admin"}
-
-PRODUCT_BARCODE=${SMOKE_PRODUCT_BARCODE:-"0000000000"}
-CUSTOMER_NAME=${SMOKE_CUSTOMER_NAME:-"Smoke Customer"}
-CUSTOMER_PHONE=${SMOKE_CUSTOMER_PHONE:-"+966555000000"}
-
-export SMOKE_TENANT_SLUG="$TENANT_SLUG"
-export SMOKE_TENANT_ADMIN_EMAIL="$TENANT_ADMIN_EMAIL"
-
 log() {
   echo "[smoke] $*"
 }
@@ -28,6 +9,50 @@ fail() {
   echo "[smoke] ERROR: $*" >&2
   exit 1
 }
+
+use_smoke_env=0
+for var in SMOKE_BASE_URL SMOKE_SUPER_ADMIN_EMAIL SMOKE_SUPER_ADMIN_PASSWORD \
+  SMOKE_TENANT_NAME SMOKE_TENANT_SLUG SMOKE_TENANT_ADMIN_EMAIL \
+  SMOKE_TENANT_ADMIN_PASSWORD SMOKE_PRODUCT_BARCODE SMOKE_CUSTOMER_NAME \
+  SMOKE_CUSTOMER_PHONE; do
+  if [[ -n "${!var:-}" ]]; then
+    use_smoke_env=1
+    break
+  fi
+done
+
+if [[ $use_smoke_env -eq 1 ]]; then
+  BASE_URL=${SMOKE_BASE_URL:-http://127.0.0.1:3001}
+  SUPER_ADMIN_EMAIL=${SMOKE_SUPER_ADMIN_EMAIL:-admin@noor.system}
+  SUPER_ADMIN_PASSWORD=${SMOKE_SUPER_ADMIN_PASSWORD:-superadmin123}
+  TENANT_NAME=${SMOKE_TENANT_NAME:-"Smoke Tenant"}
+  TENANT_SLUG=${SMOKE_TENANT_SLUG:-"smoke-tenant"}
+  TENANT_ADMIN_EMAIL=${SMOKE_TENANT_ADMIN_EMAIL:-"smoke-admin@noor.system"}
+  TENANT_ADMIN_PASSWORD=${SMOKE_TENANT_ADMIN_PASSWORD:-"smokeadmin123"}
+  TENANT_ADMIN_NAME=${SMOKE_TENANT_ADMIN_NAME:-"Smoke Admin"}
+  PRODUCT_BARCODE=${SMOKE_PRODUCT_BARCODE:-"0000000000"}
+  CUSTOMER_NAME=${SMOKE_CUSTOMER_NAME:-"Smoke Customer"}
+  CUSTOMER_PHONE=${SMOKE_CUSTOMER_PHONE:-"+966555000000"}
+  log "Using SMOKE_ environment variables for smoke inputs."
+else
+  BASE_URL=${BASE_URL:-http://127.0.0.1:3001}
+  SUPER_ADMIN_EMAIL=${SUPER_ADMIN_EMAIL:-admin@noor.system}
+  SUPER_ADMIN_PASSWORD=${SUPER_ADMIN_PASSWORD:-superadmin123}
+  TENANT_NAME=${SEED_TENANT_NAME:-"Smoke Tenant"}
+  TENANT_SLUG=${SEED_TENANT_SLUG:-"smoke-tenant"}
+  TENANT_ADMIN_EMAIL=${TENANT_ADMIN_EMAIL:-"smoke-admin@noor.system"}
+  TENANT_ADMIN_PASSWORD=${TENANT_ADMIN_PASSWORD:-"smokeadmin123"}
+  TENANT_ADMIN_NAME=${TENANT_ADMIN_NAME:-"Smoke Admin"}
+  PRODUCT_BARCODE=${SEED_PRODUCT_BARCODE:-"0000000000"}
+  CUSTOMER_NAME=${CUSTOMER_NAME:-"Smoke Customer"}
+  CUSTOMER_PHONE=${CUSTOMER_PHONE:-"+966555000000"}
+  log "Using legacy environment variables for smoke inputs."
+fi
+
+API_BASE="${BASE_URL%/}/api"
+
+export SMOKE_TENANT_SLUG="$TENANT_SLUG"
+export SMOKE_TENANT_ADMIN_EMAIL="$TENANT_ADMIN_EMAIL"
 
 request() {
   local method=$1
@@ -72,6 +97,40 @@ request() {
   fi
 
   echo "$body"
+}
+
+request_with_status() {
+  local method=$1
+  local url=$2
+  local token=${3:-}
+  local data=${4:-}
+  local response
+
+  if [[ -n "$data" ]]; then
+    if ! response=$(curl -sS -w "\n%{http_code}" -X "$method" \
+      -H 'Content-Type: application/json' \
+      ${token:+-H "Authorization: Bearer $token"} \
+      --data "$data" \
+      "$url"); then
+      fail "Request failed: $method $url"
+    fi
+  else
+    if ! response=$(curl -sS -w "\n%{http_code}" -X "$method" \
+      -H 'Content-Type: application/json' \
+      ${token:+-H "Authorization: Bearer $token"} \
+      "$url"); then
+      fail "Request failed: $method $url"
+    fi
+  fi
+
+  local status=${response##*$'\n'}
+  if [[ ! "$status" =~ ^[0-9]{3}$ ]]; then
+    echo "[smoke] Unexpected response status for $method $url: $status" >&2
+    echo "${response%$'\n'*}" >&2
+    exit 1
+  fi
+
+  echo "$response"
 }
 
 json_eval() {
@@ -185,7 +244,19 @@ users_body=$(request GET "$API_BASE/tenants/$tenant_id/users" "$SUPER_TOKEN")
 admin_exists=$(json_optional "$users_body" 'next((u.get("id") for u in (json if isinstance(json, list) else (json.get("data") or json.get("users") or [])) if u.get("email") == os.environ.get("SMOKE_TENANT_ADMIN_EMAIL")), None)')
 
 if [[ -z "$admin_exists" ]]; then
-  request POST "$API_BASE/tenants/$tenant_id/users" "$SUPER_TOKEN" "{\"name\":\"$TENANT_ADMIN_NAME\",\"email\":\"$TENANT_ADMIN_EMAIL\",\"password\":\"$TENANT_ADMIN_PASSWORD\"}" >/dev/null
+  create_response=$(request_with_status POST "$API_BASE/tenants/$tenant_id/users" "$SUPER_TOKEN" "{\"name\":\"$TENANT_ADMIN_NAME\",\"email\":\"$TENANT_ADMIN_EMAIL\",\"password\":\"$TENANT_ADMIN_PASSWORD\"}")
+  create_body=${create_response%$'\n'*}
+  create_status=${create_response##*$'\n'}
+  if [[ "$create_status" == "400" ]]; then
+    log "Tenant admin already exists; resolving existing user."
+    users_body=$(request GET "$API_BASE/tenants/$tenant_id/users" "$SUPER_TOKEN")
+    admin_exists=$(json_optional "$users_body" 'next((u.get("id") for u in (json if isinstance(json, list) else (json.get("data") or json.get("users") or [])) if u.get("email") == os.environ.get("SMOKE_TENANT_ADMIN_EMAIL")), None)')
+  elif (( create_status >= 400 )); then
+    echo "[smoke] ERROR POST $API_BASE/tenants/$tenant_id/users -> $create_status" >&2
+    echo "[smoke] Response body:" >&2
+    echo "$create_body" >&2
+    exit 1
+  fi
 fi
 
 log "Logging in as tenant admin..."
