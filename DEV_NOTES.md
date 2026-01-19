@@ -83,6 +83,34 @@ SMOKE_PRODUCT_BARCODE="0000000000" \
 # Legacy env vars are still supported (BASE_URL, SUPER_ADMIN_EMAIL, SEED_TENANT_NAME, etc.)
 ```
 
+### Phase 0.5 Security Hardening Runbook (Server)
+```bash
+# 1) Migrate (production-safe, no default super admin seed unless explicitly enabled)
+npm run migration:run --prefix backend-nestjs
+
+# 2) Seed (dev only)
+ALLOW_DEFAULT_SUPER_ADMIN_SEED=true NODE_ENV=development \
+  npm run migration:run --prefix backend-nestjs
+
+# 3) Reset/create SUPER_ADMIN (requires explicit opt-in)
+export SUPER_ADMIN_EMAIL="superadmin@example.com"
+export SUPER_ADMIN_PASSWORD="replace-with-strong-password"
+export SUPER_ADMIN_NAME="Super Admin"
+ALLOW_SUPER_ADMIN_RESET=true \
+  npm run super-admin:reset --prefix backend-nestjs
+
+# 4) Smoke test
+SMOKE_BASE_URL="http://127.0.0.1:3001" \
+SMOKE_SUPER_ADMIN_EMAIL="$SUPER_ADMIN_EMAIL" \
+SMOKE_SUPER_ADMIN_PASSWORD="$SUPER_ADMIN_PASSWORD" \
+SMOKE_TENANT_NAME="Smoke Tenant" \
+SMOKE_TENANT_SLUG="smoke-tenant" \
+SMOKE_TENANT_ADMIN_EMAIL="smoke-admin@noor.system" \
+SMOKE_TENANT_ADMIN_PASSWORD="smokeadmin123" \
+SMOKE_PRODUCT_BARCODE="0000000000" \
+./backend-nestjs/scripts/smoke-e2e.sh
+```
+
 ### Frontend (`frontend-nextjs`)
 ```bash
 cp env.example .env.local     # define NEXT_PUBLIC_API_URL + API_BASE_URL
@@ -99,7 +127,7 @@ npm run build && npm start    # production preview
 - Preparer app: open `android-preparer-app` → configure backend base in `BuildConfig` before building.
 
 ## Auth & Tenancy Flow
-- Super admin seed migrations are gated by `ALLOW_DEFAULT_SUPER_ADMIN_SEED=true` and are blocked in production. Use `npm run seed:smoke --prefix backend-nestjs` only for local smoke setups.
+- Super admin seed migrations are gated by `ALLOW_DEFAULT_SUPER_ADMIN_SEED=true` (off by default). Use `npm run seed:smoke --prefix backend-nestjs` only for local smoke setups.
 - Login steps:
   1. Run backend + frontend locally.
   2. POST `/api/auth/login` (or use the login page) with the seeded SUPER_ADMIN credentials (`SUPER_ADMIN_EMAIL`/`SUPER_ADMIN_PASSWORD` when running `seed:smoke`) → store JWT in `localStorage` (`token`).
@@ -131,6 +159,25 @@ npm run build && npm start    # production preview
 - Canonical environment variables: `SMOKE_BASE_URL`, `SMOKE_SUPER_ADMIN_EMAIL`, `SMOKE_SUPER_ADMIN_PASSWORD`, `SMOKE_TENANT_NAME`, `SMOKE_TENANT_SLUG`, `SMOKE_TENANT_ADMIN_EMAIL`, `SMOKE_TENANT_ADMIN_PASSWORD`, `SMOKE_PRODUCT_BARCODE`.
 - Legacy fallbacks remain supported (`BASE_URL`, `SUPER_ADMIN_EMAIL`, `SUPER_ADMIN_PASSWORD`, `TENANT_NAME`, `TENANT_SLUG`, `TENANT_ADMIN_EMAIL`, `TENANT_ADMIN_PASSWORD`, `PRODUCT_BARCODE`).
 - Run with: `npm run smoke:e2e --prefix backend-nestjs` (uses `backend-nestjs/scripts/smoke-e2e.sh`).
+
+## How to Verify (Phase 0.5 Security Hardening)
+```bash
+# Confirm migrations apply without default super admin in production
+NODE_ENV=production npm run migration:run --prefix backend-nestjs
+
+# Opt-in dev seed (should create seeded super admin only when flag is true)
+ALLOW_DEFAULT_SUPER_ADMIN_SEED=true NODE_ENV=development \
+  npm run migration:run --prefix backend-nestjs
+
+# Reset/create SUPER_ADMIN without default credentials
+ALLOW_SUPER_ADMIN_RESET=true \
+  SUPER_ADMIN_EMAIL="superadmin@example.com" \
+  SUPER_ADMIN_PASSWORD="replace-with-strong-password" \
+  npm run super-admin:reset --prefix backend-nestjs
+
+# Run smoke
+npm run smoke:e2e --prefix backend-nestjs
+```
 
 ## Final Summary
 ### Backend Fixes
